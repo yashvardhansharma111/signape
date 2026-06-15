@@ -3,115 +3,13 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Monitor, Wifi, WifiOff, Plus, Search,
-  Copy, ExternalLink, X, LayoutGrid, List, Pencil, Check,
-  UserCheck, UserX,
+  Copy, ExternalLink, X, LayoutGrid, List, Pencil,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { api, type Device } from "@/lib/api";
 import { patchDeviceStatus, useDashboardSocket } from "@/lib/useDashboardSocket";
 
 type ViewMode = "grid" | "list";
-type Occupancy = "occupied" | "unoccupied" | null;
-type Gender = "male" | "female" | null;
-
-// ── Male / Female SVG icons ───────────────────────────────────────────────────
-function MaleIcon({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="10" cy="14" r="5" />
-      <line x1="19" y1="5" x2="14.1" y2="9.9" />
-      <polyline points="15 5 19 5 19 9" />
-    </svg>
-  );
-}
-function FemaleIcon({ size = 14, color = "currentColor" }: { size?: number; color?: string }) {
-  return (
-    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" stroke={color} strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="8" r="5" />
-      <line x1="12" y1="13" x2="12" y2="21" />
-      <line x1="9" y1="18" x2="15" y2="18" />
-    </svg>
-  );
-}
-
-// ── Badge colours ─────────────────────────────────────────────────────────────
-const OCC: Record<"occupied" | "unoccupied", { bg: string; text: string; border: string }> = {
-  occupied:   { bg: "#FEE2E2", text: "#dc2626", border: "#dc2626" },
-  unoccupied: { bg: "#DCFCE7", text: "#16a34a", border: "#16a34a" },
-};
-const GEN: Record<"male" | "female", { bg: string; text: string; border: string }> = {
-  male:   { bg: "#DBEAFE", text: "#1d4ed8", border: "#1d4ed8" },
-  female: { bg: "#FCE7F3", text: "#be185d", border: "#be185d" },
-};
-const NEUTRAL = { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" };
-
-// ── Inline badge components ───────────────────────────────────────────────────
-function OccupancyBadge({ value }: { value: Occupancy }) {
-  const s = value ? OCC[value] : NEUTRAL;
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
-      style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}
-    >
-      {value === "occupied"   && <UserCheck size={12} />}
-      {value === "unoccupied" && <UserX size={12} />}
-      {!value && <UserX size={12} style={{ opacity: 0.4 }} />}
-      {value ?? "occupancy"}
-    </span>
-  );
-}
-
-function GenderBadge({ value }: { value: Gender }) {
-  const s = value ? GEN[value] : NEUTRAL;
-  return (
-    <span
-      className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
-      style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}
-    >
-      {value === "male"   && <MaleIcon size={12} color={s.text} />}
-      {value === "female" && <FemaleIcon size={12} color={s.text} />}
-      {!value && <MaleIcon size={12} color={NEUTRAL.text} />}
-      {value ?? "gender"}
-    </span>
-  );
-}
-
-// ── Tag toggle helper ─────────────────────────────────────────────────────────
-function TagToggle<T extends string>({
-  label, options, value, onChange, styles, icons,
-}: {
-  label: string;
-  options: T[];
-  value: T | null;
-  onChange: (v: T | null) => void;
-  styles: Record<T, { bg: string; text: string; border: string }>;
-  icons: Record<T, React.ReactNode>;
-}) {
-  return (
-    <div>
-      <p className="mb-1.5 text-xs font-medium text-gray-500">{label}</p>
-      <div className="flex flex-wrap gap-2">
-        {options.map((opt) => {
-          const active = value === opt;
-          const s = active ? styles[opt] : NEUTRAL;
-          return (
-            <button
-              key={opt}
-              type="button"
-              onClick={() => onChange(active ? null : opt)}
-              className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
-              style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}
-            >
-              {active && <Check size={11} />}
-              {!active && icons[opt]}
-              {opt}
-            </button>
-          );
-        })}
-      </div>
-    </div>
-  );
-}
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 function EditModal({ device, onClose, onSaved }: {
@@ -119,15 +17,13 @@ function EditModal({ device, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (updated: Device) => void;
 }) {
-  const [floor, setFloor]         = useState(device.floor ?? "");
-  const [occupancy, setOccupancy] = useState<Occupancy>(device.occupancy);
-  const [gender, setGender]       = useState<Gender>(device.gender);
-  const [saving, setSaving]       = useState(false);
+  const [floor,  setFloor]  = useState(device.floor ?? "");
+  const [saving, setSaving] = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
     try {
-      const updated = await api.updateDevice(device.id, { floor: floor.trim() || undefined, occupancy, gender });
+      const updated = await api.updateDevice(device.id, { floor: floor.trim() || undefined });
       onSaved(updated);
       onClose();
     } catch (e) {
@@ -161,25 +57,6 @@ function EditModal({ device, onClose, onSaved }: {
               className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]"
             />
           </div>
-          <TagToggle
-            label="Occupancy"
-            options={["occupied", "unoccupied"] as const}
-            value={occupancy}
-            onChange={setOccupancy}
-            styles={OCC}
-            icons={{ occupied: <UserCheck size={11} />, unoccupied: <UserX size={11} /> }}
-          />
-          <TagToggle
-            label="Gender"
-            options={["male", "female"] as const}
-            value={gender}
-            onChange={setGender}
-            styles={GEN}
-            icons={{
-              male:   <MaleIcon size={11} color={NEUTRAL.text} />,
-              female: <FemaleIcon size={11} color={NEUTRAL.text} />,
-            }}
-          />
         </div>
 
         <div className="flex gap-3 border-t px-5 py-4" style={{ borderColor: "#E5E7EB" }}>
@@ -199,17 +76,15 @@ function EditModal({ device, onClose, onSaved }: {
 
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ScreensPage() {
-  const [screens, setScreens]           = useState<Device[]>([]);
-  const [search, setSearch]             = useState("");
-  const [loading, setLoading]           = useState(true);
-  const [copiedId, setCopiedId]         = useState<string | null>(null);
-  const [showForm, setShowForm]         = useState(false);
-  const [creating, setCreating]         = useState(false);
+  const [screens,       setScreens]       = useState<Device[]>([]);
+  const [search,        setSearch]        = useState("");
+  const [loading,       setLoading]       = useState(true);
+  const [copiedId,      setCopiedId]      = useState<string | null>(null);
+  const [showForm,      setShowForm]      = useState(false);
+  const [creating,      setCreating]      = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
-  const [viewMode, setViewMode]         = useState<ViewMode>("grid");
-  const [form, setForm] = useState<{ name: string; location: string; floor: string; occupancy: Occupancy; gender: Gender }>({
-    name: "", location: "", floor: "", occupancy: null, gender: null,
-  });
+  const [viewMode,      setViewMode]      = useState<ViewMode>("grid");
+  const [form, setForm] = useState({ name: "", location: "", floor: "" });
 
   const loadScreens = useCallback(() => {
     setLoading(true);
@@ -238,21 +113,19 @@ export default function ScreensPage() {
     setCreating(true);
     try {
       await api.createDevice({
-        name: form.name.trim(), location: form.location.trim(),
-        ...(form.floor.trim()  ? { floor:     form.floor.trim()  } : {}),
-        ...(form.occupancy     ? { occupancy: form.occupancy     } : {}),
-        ...(form.gender        ? { gender:    form.gender        } : {}),
+        name:     form.name.trim(),
+        location: form.location.trim(),
+        ...(form.floor.trim() ? { floor: form.floor.trim() } : {}),
       });
-      setForm({ name: "", location: "", floor: "", occupancy: null, gender: null });
+      setForm({ name: "", location: "", floor: "" });
       setShowForm(false);
       loadScreens();
     } catch (e) { console.error(e); }
     finally     { setCreating(false); }
   };
 
-  const handleSaved = (updated: Device) => {
+  const handleSaved = (updated: Device) =>
     setScreens((p) => p.map((s) => s.id === updated.id ? updated : s));
-  };
 
   const isOnline    = (s: Device) => s.status === "online";
   const borderColor = (s: Device) => isOnline(s) ? "#16a34a" : "#dc2626";
@@ -298,7 +171,9 @@ export default function ScreensPage() {
           <div className="mb-6 rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
             <div className="mb-4 flex items-center justify-between">
               <h3 className="font-semibold text-[#042B19]">New screen</h3>
-              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400"><X className="h-5 w-5" /></button>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400">
+                <X className="h-5 w-5" />
+              </button>
             </div>
             <div className="grid gap-3 sm:grid-cols-3">
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -307,17 +182,6 @@ export default function ScreensPage() {
                 placeholder="Location" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19]" />
               <input type="text" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })}
                 placeholder="Floor (e.g. Ground Floor)" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19]" />
-            </div>
-            <div className="mt-4 grid gap-4 sm:grid-cols-2">
-              <TagToggle label="Occupancy" options={["occupied", "unoccupied"] as const}
-                value={form.occupancy} onChange={(v) => setForm({ ...form, occupancy: v })}
-                styles={OCC} icons={{ occupied: <UserCheck size={11} />, unoccupied: <UserX size={11} /> }} />
-              <TagToggle label="Gender" options={["male", "female"] as const}
-                value={form.gender} onChange={(v) => setForm({ ...form, gender: v })}
-                styles={GEN} icons={{
-                  male:   <MaleIcon size={11} color={NEUTRAL.text} />,
-                  female: <FemaleIcon size={11} color={NEUTRAL.text} />,
-                }} />
             </div>
             <button type="button" onClick={handleCreate} disabled={creating}
               className="mt-5 rounded-lg bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
@@ -340,7 +204,6 @@ export default function ScreensPage() {
               <div key={screen.id} className="rounded-2xl bg-white p-5 shadow-sm"
                 style={{ border: `2px solid ${borderColor(screen)}` }}>
 
-                {/* Header row */}
                 <div className="mb-3 flex items-start justify-between">
                   <div className="flex h-11 w-11 items-center justify-center rounded-lg"
                     style={{ backgroundColor: isOnline(screen) ? "#DCFCE7" : "#FEE2E2" }}>
@@ -352,7 +215,7 @@ export default function ScreensPage() {
                       {isOnline(screen) ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
                       {screen.status}
                     </span>
-                    <button type="button" onClick={() => setEditingDevice(screen)} title="Edit tags"
+                    <button type="button" onClick={() => setEditingDevice(screen)} title="Edit screen"
                       className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-[#042B19] transition">
                       <Pencil className="h-3.5 w-3.5" />
                     </button>
@@ -360,15 +223,9 @@ export default function ScreensPage() {
                 </div>
 
                 <h3 className="mb-0.5 text-lg font-bold" style={{ color: "#042B19" }}>{screen.name}</h3>
-                <p className="mb-3 text-sm text-gray-500">
+                <p className="mb-4 text-sm text-gray-500">
                   {screen.location}{screen.floor ? ` · ${screen.floor}` : ""}
                 </p>
-
-                {/* Occupancy + Gender — always visible */}
-                <div className="mb-3 flex flex-wrap gap-1.5">
-                  <OccupancyBadge value={screen.occupancy} />
-                  <GenderBadge value={screen.gender} />
-                </div>
 
                 <div className="space-y-1 border-t pt-3 text-sm" style={{ borderColor: "#E5E7EB" }}>
                   <p className="text-gray-600">Playlist: <span className="font-medium text-gray-900">{screen.playlist || "—"}</span></p>
@@ -400,8 +257,6 @@ export default function ScreensPage() {
                   style={{ borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" }}>
                   <th className="px-4 py-3">Status</th>
                   <th className="px-4 py-3">Name</th>
-                  <th className="px-4 py-3">Occupancy</th>
-                  <th className="px-4 py-3">Gender</th>
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Floor</th>
                   <th className="px-4 py-3">Last Seen</th>
@@ -423,14 +278,12 @@ export default function ScreensPage() {
                       <p className="text-base font-bold" style={{ color: "#042B19" }}>{screen.name}</p>
                       <p className="text-xs text-gray-400">{screen.playlist || "No playlist"}</p>
                     </td>
-                    <td className="px-4 py-4"><OccupancyBadge value={screen.occupancy} /></td>
-                    <td className="px-4 py-4"><GenderBadge value={screen.gender} /></td>
                     <td className="px-4 py-4 text-gray-600">{screen.location}</td>
                     <td className="px-4 py-4 text-gray-500">{screen.floor || "—"}</td>
                     <td className="px-4 py-4 text-gray-500">{screen.lastSeen}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">
-                        <button type="button" onClick={() => setEditingDevice(screen)} title="Edit tags"
+                        <button type="button" onClick={() => setEditingDevice(screen)} title="Edit screen"
                           className="rounded-lg border border-[#E5E7EB] p-1.5 text-gray-400 hover:bg-gray-50 hover:text-[#042B19] transition">
                           <Pencil className="h-3.5 w-3.5" />
                         </button>
