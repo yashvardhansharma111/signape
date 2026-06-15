@@ -48,7 +48,7 @@ export default function MediaLibraryPage() {
   return (
     <div>
       <DashboardHeader
-        title="Media library"
+        title="Media Library"
         subtitle="Upload, organize, and manage your content assets."
       />
       <main className="p-6">

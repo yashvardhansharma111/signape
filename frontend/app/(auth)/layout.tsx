@@ -13,9 +13,9 @@ export default function AuthLayout({ children }: { children: React.ReactNode }) 
               className="flex h-10 w-10 items-center justify-center rounded-lg font-bold text-white"
               style={{ backgroundColor: "#16a34a" }}
             >
-              S
+              A
             </div>
-            <span className="text-2xl font-bold text-white">Signape</span>
+            <span className="text-2xl font-bold text-white">AIM4IT</span>
           </Link>
         </div>
 

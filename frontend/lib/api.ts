@@ -76,7 +76,7 @@ export interface PresentResponse {
   playlist: string;
   deviceIds: string[];
   startedAt: string | null;
-  devices: { id: string; name: string; status?: "online" | "offline"; selected: boolean }[];
+  devices: { id: string; name: string; status: "online" | "offline"; selected: boolean }[];
   playlists: { id: string; name: string }[];
 }
 

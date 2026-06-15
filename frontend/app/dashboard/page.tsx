@@ -121,7 +121,7 @@ export default function OverviewPage() {
           icon: Monitor,
         },
         {
-          title: "Media library",
+          title: "Media Library",
           description: "Upload and organize your content assets.",
           value: `${data.stats.mediaAssets} files`,
           href: "/dashboard/media-library",

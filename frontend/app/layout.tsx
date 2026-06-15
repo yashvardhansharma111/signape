@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Signape",
+  title: "AIM4IT",
   description: "Digital signage management platform",
 };
 

@@ -67,10 +67,10 @@ export default function DashboardHeader({ title, subtitle }: DashboardHeaderProp
           </div>
           <div className="hidden min-w-0 sm:block">
             <p className="truncate text-sm font-semibold text-[#042B19]">
-              {settings?.displayName ?? "Signape User"}
+              {settings?.displayName ?? "AIM4IT User"}
             </p>
             <p className="truncate text-xs text-gray-500">
-              {settings?.organization ?? "Signape"}
+              {settings?.organization ?? "AIM4IT"}
             </p>
           </div>
         </Link>

@@ -27,7 +27,7 @@ interface SidebarProps {
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Screens", href: "/dashboard/screens", icon: Monitor },
-  { label: "Media library", href: "/dashboard/media-library", icon: Library },
+  { label: "Media Library", href: "/dashboard/media-library", icon: Library },
   { label: "Playlists", href: "/dashboard/playlists", icon: ListVideo },
   { label: "Schedule", href: "/dashboard/schedule", icon: Calendar },
   { label: "Present", href: "/dashboard/present", icon: Presentation },
@@ -74,9 +74,9 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               className="flex h-9 w-9 items-center justify-center rounded-lg font-bold text-white"
               style={{ backgroundColor: "#16a34a" }}
             >
-              S
+              A
             </div>
-            <span className="text-lg font-bold text-white">Signape</span>
+            <span className="text-lg font-bold text-white">AIM4IT</span>
           </Link>
         ) : (
           <Link href="/dashboard" className="mx-auto">
@@ -84,7 +84,7 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
               className="flex h-9 w-9 items-center justify-center rounded-lg font-bold text-white"
               style={{ backgroundColor: "#16a34a" }}
             >
-              S
+              A
             </div>
           </Link>
         )}

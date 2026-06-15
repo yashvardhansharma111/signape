@@ -12,10 +12,10 @@ export default function Home() {
             className="flex h-14 w-14 items-center justify-center rounded-xl text-2xl font-bold text-white"
             style={{ backgroundColor: "#16a34a" }}
           >
-            S
+            A
           </div>
         </div>
-        <h1 className="mb-3 text-4xl font-bold text-white">Signape</h1>
+        <h1 className="mb-3 text-4xl font-bold text-white">AIM4IT</h1>
         <p className="mb-8 max-w-md text-white/70">
           Digital signage management for screens, media, playlists, and live presentations.
         </p>
