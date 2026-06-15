@@ -20,8 +20,8 @@ const deviceSchema = new Schema<IDevice>(
     playlistId: { type: Schema.Types.ObjectId, ref: "Playlist" },
     deviceToken: { type: String, required: true, unique: true },
     lastSeenAt: { type: Date, default: Date.now },
-    occupancy: { type: String, enum: ["occupied", "unoccupied"], default: null },
-    gender: { type: String, enum: ["male", "female"], default: null },
+    occupancy: { type: String, enum: ["occupied", "unoccupied", null], default: undefined },
+    gender: { type: String, enum: ["male", "female", null], default: undefined },
   },
   {
     timestamps: true,
