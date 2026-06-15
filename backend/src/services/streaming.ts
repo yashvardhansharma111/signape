@@ -144,7 +144,10 @@ export async function getDeviceDisplayState(deviceId: string, deviceToken: strin
       id: device._id.toString(),
       name: device.name,
       location: device.location,
+      floor: device.floor ?? "",
       status: device.status,
+      occupancy: device.occupancy ?? null,
+      gender: device.gender ?? null,
     },
     playback,
   };

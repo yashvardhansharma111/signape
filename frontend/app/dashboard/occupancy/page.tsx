@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users, Filter, RefreshCw, Building2, UserCheck, UserX,
-  ChevronDown, Calendar, Pencil, X, Copy, ExternalLink,
+  ChevronDown, Calendar, Pencil, X, Copy, ExternalLink, Plus,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import {
@@ -323,6 +323,9 @@ export default function OccupancyPage() {
   const [refreshing,    setRefreshing]    = useState(false);
   const [editingDevice, setEditingDevice] = useState<LiveOccupancyDevice | null>(null);
   const [copiedId,      setCopiedId]      = useState<string | null>(null);
+  const [showForm,      setShowForm]      = useState(false);
+  const [creating,      setCreating]      = useState(false);
+  const [form,          setForm]          = useState({ name: "", location: "", floor: "" });
 
   const [floor,  setFloor]  = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -391,12 +394,28 @@ export default function OccupancyPage() {
   };
 
   const getDisplayUrl = (d: LiveOccupancyDevice) =>
-    `${typeof window !== "undefined" ? window.location.origin : ""}/display/${d.id}?token=${d.deviceToken}`;
+    `${typeof window !== "undefined" ? window.location.origin : ""}/display/${d.id}?token=${d.deviceToken}&mode=room`;
 
   const copyDisplayUrl = async (d: LiveOccupancyDevice) => {
     await navigator.clipboard.writeText(getDisplayUrl(d));
     setCopiedId(d.id);
     setTimeout(() => setCopiedId(null), 2000);
+  };
+
+  const handleCreate = async () => {
+    if (!form.name.trim() || !form.location.trim()) return;
+    setCreating(true);
+    try {
+      await api.createDevice({
+        name:     form.name.trim(),
+        location: form.location.trim(),
+        ...(form.floor.trim() ? { floor: form.floor.trim() } : {}),
+      });
+      setForm({ name: "", location: "", floor: "" });
+      setShowForm(false);
+      await load();
+    } catch (e) { console.error(e); }
+    finally { setCreating(false); }
   };
 
   const handleTagSaved = (
@@ -471,13 +490,47 @@ export default function OccupancyPage() {
             })}
           </div>
 
-          <div className="ml-auto">
+          <div className="ml-auto flex items-center gap-2">
             <button type="button" onClick={() => load(true)} disabled={refreshing}
               className="flex items-center gap-1 rounded-full border border-[#E5E7EB] bg-white px-3 py-1.5 text-xs font-medium text-gray-600 hover:bg-gray-50 disabled:opacity-50">
               <RefreshCw className={`h-3 w-3 ${refreshing ? "animate-spin" : ""}`} /> Refresh
             </button>
+            <button type="button" onClick={() => setShowForm(true)}
+              className="inline-flex items-center gap-1.5 rounded-full bg-[#16a34a] px-3 py-1.5 text-xs font-semibold text-white hover:opacity-90">
+              <Plus className="h-3 w-3" /> Add screen
+            </button>
           </div>
         </div>
+
+        {/* Add screen form */}
+        {showForm && (
+          <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
+            <div className="mb-4 flex items-center justify-between">
+              <h3 className="font-semibold text-[#042B19]">New screen</h3>
+              <button type="button" onClick={() => setShowForm(false)} className="text-gray-400 hover:text-gray-600">
+                <X className="h-5 w-5" />
+              </button>
+            </div>
+            <div className="grid gap-3 sm:grid-cols-3">
+              <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
+                placeholder="Screen name" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]" />
+              <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
+                placeholder="Location" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]" />
+              <input type="text" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })}
+                placeholder="Floor (e.g. Ground Floor)" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]" />
+            </div>
+            <div className="mt-4 flex gap-3">
+              <button type="button" onClick={() => setShowForm(false)}
+                className="rounded-lg border border-[#E5E7EB] px-5 py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+                Cancel
+              </button>
+              <button type="button" onClick={handleCreate} disabled={creating || !form.name.trim() || !form.location.trim()}
+                className="rounded-lg bg-[#16a34a] px-5 py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+                {creating ? "Creating..." : "Create screen"}
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* Stat cards */}
         <div className="grid grid-cols-2 gap-4 lg:grid-cols-5">
