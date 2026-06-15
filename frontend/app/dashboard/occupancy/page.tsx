@@ -168,7 +168,11 @@ function EditTagModal({ device, onClose, onSaved }: {
                 const s = active ? OCC[v] : NEUTRAL;
                 return (
                   <button key={v} type="button"
-                    onClick={() => setOccupancy(active ? null : v)}
+                    onClick={() => {
+                      const next = active ? null : v;
+                      setOccupancy(next);
+                      if (next !== "occupied") setGender(null);
+                    }}
                     className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
                     style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}>
                     {v === "occupied" ? <UserCheck size={11} /> : <UserX size={11} />}
@@ -179,24 +183,29 @@ function EditTagModal({ device, onClose, onSaved }: {
             </div>
           </div>
 
-          {/* Gender */}
+          {/* Gender — only selectable when occupied */}
           <div>
             <p className="mb-2 text-xs font-medium text-gray-500">Gender</p>
-            <div className="flex gap-2">
-              {(["male", "female"] as const).map((v) => {
-                const active = gender === v;
-                const s = active ? GEN[v] : NEUTRAL;
-                return (
-                  <button key={v} type="button"
-                    onClick={() => setGender(active ? null : v)}
-                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
-                    style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}>
-                    {v === "male" ? <MaleIcon size={11} color={s.text} /> : <FemaleIcon size={11} color={s.text} />}
-                    {v}
-                  </button>
-                );
-              })}
-            </div>
+            {occupancy === "occupied" ? (
+              <div className="flex gap-2">
+                {(["male", "female"] as const).map((v) => {
+                  const active = gender === v;
+                  const s = active ? GEN[v] : NEUTRAL;
+                  return (
+                    <button key={v} type="button"
+                      onClick={() => setGender(active ? null : v)}
+                      className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
+                      style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}>
+                      {v === "male" ? <MaleIcon size={11} color={s.text} /> : <FemaleIcon size={11} color={s.text} />}
+                      {v}
+                    </button>
+                  );
+                })}
+              </div>
+            ) : (
+              <span className="inline-flex items-center rounded-full px-3 py-1.5 text-xs font-semibold text-gray-400"
+                style={{ backgroundColor: "#F3F4F6", border: "1.5px solid #E5E7EB" }}>—</span>
+            )}
           </div>
         </div>
 

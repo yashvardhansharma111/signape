@@ -117,69 +117,103 @@ export default function GroupsPage() {
                 </button>
               </div>
 
-              <div className="space-y-4 px-6 py-5">
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">Group name</label>
-                  <input
-                    type="text"
-                    value={editing.name}
-                    onChange={(e) => setEditing({ ...editing, name: e.target.value })}
-                    placeholder="e.g. Ground Floor, India Branch"
-                    className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]"
-                  />
-                </div>
+              {(() => {
+                // Devices already assigned to OTHER groups (not the one being edited)
+                const takenMap = new Map<string, string>(); // deviceId → group name
+                for (const g of groups) {
+                  if (g.id === editing.id) continue;
+                  for (const did of g.deviceIds) takenMap.set(did, g.name);
+                }
 
-                <div>
-                  <label className="mb-1.5 block text-sm font-medium text-gray-700">
-                    Screens ({editing.deviceIds.length} selected)
-                  </label>
-                  <div
-                    className="max-h-52 overflow-y-auto rounded-lg border"
-                    style={{ borderColor: "#E5E7EB" }}
-                  >
-                    {devices.length === 0 ? (
-                      <p className="p-4 text-sm text-gray-400">No screens registered yet.</p>
-                    ) : (
-                      devices.map((device) => {
-                        const selected = editing.deviceIds.includes(device.id);
-                        return (
-                          <button
-                            key={device.id}
-                            type="button"
-                            onClick={() => toggleDevice(device.id)}
-                            className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition hover:bg-gray-50 last:border-0"
-                            style={{ borderColor: "#E5E7EB" }}
-                          >
-                            <div
-                              className="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition"
-                              style={{
-                                borderColor: selected ? "#16a34a" : "#D1D5DB",
-                                backgroundColor: selected ? "#16a34a" : "transparent",
-                              }}
-                            >
-                              {selected && <Check className="h-3 w-3 text-white" />}
-                            </div>
-                            <Monitor className="h-4 w-4 shrink-0 text-gray-400" />
-                            <div className="min-w-0 flex-1">
-                              <p className="truncate text-sm font-medium text-[#042B19]">{device.name}</p>
-                              <p className="text-xs text-gray-400">{device.location}</p>
-                            </div>
-                            <span
-                              className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
-                              style={{
-                                backgroundColor: device.status === "online" ? "#DCFCE7" : "#FEE2E2",
-                                color: device.status === "online" ? "#15803d" : "#dc2626",
-                              }}
-                            >
-                              {device.status}
-                            </span>
-                          </button>
-                        );
-                      })
-                    )}
+                return (
+                  <div className="space-y-4 px-6 py-5">
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">Group name</label>
+                      <input
+                        type="text"
+                        value={editing.name}
+                        onChange={(e) => setEditing({ ...editing, name: e.target.value })}
+                        placeholder="e.g. Ground Floor, India Branch"
+                        className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]"
+                      />
+                    </div>
+
+                    <div>
+                      <label className="mb-1.5 block text-sm font-medium text-gray-700">
+                        Screens ({editing.deviceIds.length} selected)
+                      </label>
+                      <div
+                        className="max-h-52 overflow-y-auto rounded-lg border"
+                        style={{ borderColor: "#E5E7EB" }}
+                      >
+                        {devices.length === 0 ? (
+                          <p className="p-4 text-sm text-gray-400">No screens registered yet.</p>
+                        ) : (
+                          devices.map((device) => {
+                            const taken     = takenMap.get(device.id);
+                            const selected  = editing.deviceIds.includes(device.id);
+                            const disabled  = !!taken;
+
+                            if (disabled) {
+                              return (
+                                <div
+                                  key={device.id}
+                                  className="flex w-full items-center gap-3 border-b px-4 py-3 last:border-0 cursor-not-allowed opacity-45"
+                                  style={{ borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" }}
+                                >
+                                  <div className="flex h-5 w-5 shrink-0 items-center justify-center rounded border" style={{ borderColor: "#D1D5DB" }} />
+                                  <Monitor className="h-4 w-4 shrink-0 text-gray-300" />
+                                  <div className="min-w-0 flex-1">
+                                    <p className="truncate text-sm font-medium text-gray-400">{device.name}</p>
+                                    <p className="text-xs text-gray-400">{device.location}</p>
+                                  </div>
+                                  <span className="shrink-0 rounded-full px-2 py-0.5 text-xs font-medium text-gray-400 bg-gray-100">
+                                    {taken}
+                                  </span>
+                                </div>
+                              );
+                            }
+
+                            return (
+                              <button
+                                key={device.id}
+                                type="button"
+                                onClick={() => toggleDevice(device.id)}
+                                className="flex w-full items-center gap-3 border-b px-4 py-3 text-left transition hover:bg-gray-50 last:border-0"
+                                style={{ borderColor: "#E5E7EB" }}
+                              >
+                                <div
+                                  className="flex h-5 w-5 shrink-0 items-center justify-center rounded border transition"
+                                  style={{
+                                    borderColor: selected ? "#16a34a" : "#D1D5DB",
+                                    backgroundColor: selected ? "#16a34a" : "transparent",
+                                  }}
+                                >
+                                  {selected && <Check className="h-3 w-3 text-white" />}
+                                </div>
+                                <Monitor className="h-4 w-4 shrink-0 text-gray-400" />
+                                <div className="min-w-0 flex-1">
+                                  <p className="truncate text-sm font-medium text-[#042B19]">{device.name}</p>
+                                  <p className="text-xs text-gray-400">{device.location}</p>
+                                </div>
+                                <span
+                                  className="shrink-0 rounded-full px-2 py-0.5 text-xs font-semibold"
+                                  style={{
+                                    backgroundColor: device.status === "online" ? "#DCFCE7" : "#FEE2E2",
+                                    color: device.status === "online" ? "#15803d" : "#dc2626",
+                                  }}
+                                >
+                                  {device.status}
+                                </span>
+                              </button>
+                            );
+                          })
+                        )}
+                      </div>
+                    </div>
                   </div>
-                </div>
-              </div>
+                );
+              })()}
 
               <div className="flex gap-3 border-t px-6 py-4" style={{ borderColor: "#E5E7EB" }}>
                 <button
