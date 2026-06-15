@@ -3,14 +3,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users, Filter, RefreshCw, Building2, UserCheck, UserX,
-  ChevronDown, Calendar, Pencil, X, Copy, ExternalLink, Plus,
+  ChevronDown, Pencil, X, Copy, ExternalLink, Plus,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import {
   api,
   type LiveOccupancyDevice,
   type OccupancyFloorStat,
-  type OccupancyHistory,
   type OccupancySummary,
 } from "@/lib/api";
 
@@ -272,45 +271,8 @@ function FloorChart({ floors }: { floors: OccupancyFloorStat[] }) {
   );
 }
 
-function TimelineChart({ history }: { history: OccupancyHistory | null }) {
-  if (!history || history.buckets.length === 0) {
-    return (
-      <div className="flex h-40 items-center justify-center text-xs text-gray-400">
-        No history data yet. Occupancy changes will be logged here.
-      </div>
-    );
-  }
-  const maxVal = Math.max(...history.buckets.map((b) => b.occupied + b.unoccupied), 1);
-  const barW   = Math.max(20, Math.floor(380 / history.buckets.length) - 4);
-
-  return (
-    <div className="overflow-x-auto">
-      <div className="flex items-end gap-1 pb-6 pt-2" style={{ minWidth: history.buckets.length * (barW + 4) }}>
-        {history.buckets.map((b) => {
-          const occH = maxVal > 0 ? (b.occupied   / maxVal) * 120 : 0;
-          const vacH = maxVal > 0 ? (b.unoccupied / maxVal) * 120 : 0;
-          return (
-            <div key={b.label} className="flex flex-col items-center gap-0.5" style={{ width: barW }}>
-              <div className="flex w-full flex-col-reverse rounded-sm overflow-hidden" style={{ height: 120 }}>
-                <div style={{ height: vacH, backgroundColor: OCC_GREEN }} title={`Vacant: ${b.unoccupied}`} />
-                <div style={{ height: occH, backgroundColor: OCC_RED }} title={`Occupied: ${b.occupied}`} />
-              </div>
-              <span className="text-[9px] text-gray-400 truncate w-full text-center">{b.label}</span>
-            </div>
-          );
-        })}
-      </div>
-      <div className="flex gap-4 text-xs">
-        <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ backgroundColor: OCC_RED }} /> Occupied</span>
-        <span className="flex items-center gap-1"><span className="h-2.5 w-2.5 rounded-sm inline-block" style={{ backgroundColor: OCC_GREEN }} /> Vacant</span>
-      </div>
-    </div>
-  );
-}
-
 type StatusFilter = "all" | "occupied" | "unoccupied";
 type GenderFilter = "all" | "male" | "female";
-type Period       = "day" | "month" | "year";
 
 const ALL_ACTIVE = { bg: "#E8F5F0", text: "#042B19", border: "#042B19" };
 
@@ -318,7 +280,6 @@ export default function OccupancyPage() {
   const [summary,       setSummary]       = useState<OccupancySummary | null>(null);
   const [devices,       setDevices]       = useState<LiveOccupancyDevice[]>([]);
   const [floors,        setFloors]        = useState<string[]>([]);
-  const [history,       setHistory]       = useState<OccupancyHistory | null>(null);
   const [loading,       setLoading]       = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [editingDevice, setEditingDevice] = useState<LiveOccupancyDevice | null>(null);
@@ -330,8 +291,6 @@ export default function OccupancyPage() {
   const [floor,  setFloor]  = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
   const [gender, setGender] = useState<GenderFilter>("all");
-  const [period, setPeriod] = useState<Period>("day");
-  const [date,   setDate]   = useState(new Date().toISOString().split("T")[0]);
 
   const timerRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -339,7 +298,7 @@ export default function OccupancyPage() {
     if (!silent) setLoading(true);
     else setRefreshing(true);
     try {
-      const [sum, devs, fls, hist] = await Promise.all([
+      const [sum, devs, fls] = await Promise.all([
         api.getOccupancySummary({ floor: floor !== "all" ? floor : undefined, gender: gender !== "all" ? gender : undefined }),
         api.getOccupancyLive({
           ...(floor  !== "all" ? { floor }  : {}),
@@ -347,20 +306,13 @@ export default function OccupancyPage() {
           ...(status !== "all" ? { status } : {}),
         }),
         api.getOccupancyFloors(),
-        api.getOccupancyHistory({
-          period, date,
-          ...(floor  !== "all" ? { floor }  : {}),
-          ...(gender !== "all" ? { gender } : {}),
-          ...(status !== "all" ? { status } : {}),
-        }),
       ]);
       setSummary(sum);
       setDevices(devs);
       setFloors(fls);
-      setHistory(hist);
     } catch (e) { console.error(e); }
     finally { setLoading(false); setRefreshing(false); }
-  }, [floor, gender, status, period, date]);
+  }, [floor, gender, status]);
 
   useEffect(() => { load(); }, [load]);
 
@@ -633,28 +585,6 @@ export default function OccupancyPage() {
           </div>
         </div>
 
-        {/* History timeline */}
-        <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
-          <div className="mb-4 flex flex-wrap items-center gap-3">
-            <div className="flex items-center gap-2">
-              <Calendar className="h-4 w-4 text-gray-400" />
-              <h2 className="text-sm font-semibold" style={{ color: "#042B19" }}>Occupancy Trend</h2>
-            </div>
-            <div className="flex gap-1 rounded-full border border-[#E5E7EB] p-0.5">
-              {(["day", "month", "year"] as Period[]).map((p) => (
-                <button key={p} type="button" onClick={() => setPeriod(p)}
-                  className="rounded-full px-3 py-1 text-xs font-semibold capitalize transition"
-                  style={{ backgroundColor: period === p ? "#042B19" : "transparent", color: period === p ? "#fff" : "#6B7280" }}>
-                  {p}
-                </button>
-              ))}
-            </div>
-            <input type="date" value={date} onChange={(e) => setDate(e.target.value)}
-              className="rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs text-gray-700 focus:outline-none focus:ring-2 focus:ring-[#042B19]"
-            />
-          </div>
-          <TimelineChart history={history} />
-        </div>
 
       </main>
     </div>
