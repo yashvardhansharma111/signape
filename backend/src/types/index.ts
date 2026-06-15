@@ -38,12 +38,24 @@ export interface CreatePlaylistInput {
   name: string;
   status?: "published" | "draft";
   mediaIds?: string[];
+  contentIds?: string[];
 }
 
 export interface UpdatePlaylistInput {
   name?: string;
   status?: "published" | "draft";
   mediaIds?: string[];
+  contentIds?: string[];
+}
+
+export interface CreateDeviceGroupInput {
+  name: string;
+  deviceIds?: string[];
+}
+
+export interface UpdateDeviceGroupInput {
+  name?: string;
+  deviceIds?: string[];
 }
 
 export interface CreateScheduleInput {

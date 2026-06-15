@@ -139,8 +139,9 @@ export async function listPlaylists() {
     id: p._id.toString(),
     name: p.name,
     status: p.status,
-    itemCount: p.mediaIds?.length ?? p.itemCount,
+    itemCount: (p.mediaIds?.length ?? 0) + (p.contentIds?.length ?? 0),
     mediaIds: (p.mediaIds ?? []).map((id) => id.toString()),
+    contentIds: p.contentIds ?? [],
     updatedAt: p.updatedAt.toISOString(),
   }));
 }
@@ -153,20 +154,23 @@ export async function getPlaylist(id: string) {
     id: playlist._id.toString(),
     name: playlist.name,
     status: playlist.status,
-    itemCount: playlist.mediaIds?.length ?? 0,
+    itemCount: (playlist.mediaIds?.length ?? 0) + (playlist.contentIds?.length ?? 0),
     mediaIds: (playlist.mediaIds ?? []).map((mid) => mid.toString()),
+    contentIds: playlist.contentIds ?? [],
     updatedAt: playlist.updatedAt.toISOString(),
   };
 }
 
 export async function createPlaylist(input: CreatePlaylistInput) {
   const mediaIds = (input.mediaIds ?? []).filter((id) => mongoose.isValidObjectId(id));
+  const contentIds = (input.contentIds ?? []).filter((id) => mongoose.isValidObjectId(id));
 
   const playlist = await Playlist.create({
     name: input.name.trim(),
     status: input.status ?? "draft",
     mediaIds,
-    itemCount: mediaIds.length,
+    contentIds,
+    itemCount: mediaIds.length + contentIds.length,
   });
 
   return getPlaylist(playlist._id.toString());
@@ -182,7 +186,9 @@ export async function updatePlaylist(id: string, input: UpdatePlaylistInput) {
   if (input.mediaIds !== undefined) {
     const mediaIds = input.mediaIds.filter((mid) => mongoose.isValidObjectId(mid));
     update.mediaIds = mediaIds.map((mid) => new mongoose.Types.ObjectId(mid));
-    update.itemCount = mediaIds.length;
+  }
+  if (input.contentIds !== undefined) {
+    update.contentIds = input.contentIds.filter((cid) => mongoose.isValidObjectId(cid));
   }
 
   const playlist = await Playlist.findByIdAndUpdate(id, update, { new: true });

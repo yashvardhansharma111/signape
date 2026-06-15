@@ -6,6 +6,7 @@ export interface IPlaylist extends Document {
   status: "published" | "draft";
   itemCount: number;
   mediaIds: mongoose.Types.ObjectId[];
+  contentIds: string[];
   createdAt: Date;
   updatedAt: Date;
 }
@@ -16,6 +17,7 @@ const playlistSchema = new Schema<IPlaylist>(
     status: { type: String, enum: ["published", "draft"], default: "published" },
     itemCount: { type: Number, default: 0 },
     mediaIds: [{ type: Schema.Types.ObjectId, ref: "Media" }],
+    contentIds: [{ type: String }],
   },
   {
     timestamps: true,

@@ -8,6 +8,8 @@ import playlistsRouter from "./playlists.js";
 import schedulesRouter from "./schedules.js";
 import settingsRouter from "./settings.js";
 import presentRouter from "./present.js";
+import contentsRouter from "./contents.js";
+import deviceGroupsRouter from "./device-groups.js";
 import { requireAuth } from "../middleware/auth.js";
 
 const router = Router();
@@ -23,5 +25,7 @@ router.use("/playlists", playlistsRouter);
 router.use("/schedules", schedulesRouter);
 router.use("/settings", settingsRouter);
 router.use("/present", presentRouter);
+router.use("/contents", contentsRouter);
+router.use("/device-groups", deviceGroupsRouter);
 
 export default router;
