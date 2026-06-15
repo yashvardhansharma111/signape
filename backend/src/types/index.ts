@@ -4,6 +4,8 @@ export interface CreateDeviceInput {
   name: string;
   location: string;
   playlistId?: string;
+  occupancy?: "occupied" | "unoccupied";
+  gender?: "male" | "female";
 }
 
 export interface UpdateDeviceInput {
@@ -11,6 +13,8 @@ export interface UpdateDeviceInput {
   location?: string;
   status?: DeviceStatus;
   playlistId?: string;
+  occupancy?: "occupied" | "unoccupied" | null;
+  gender?: "male" | "female" | null;
 }
 
 export interface CreateMediaInput {

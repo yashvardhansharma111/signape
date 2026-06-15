@@ -8,6 +8,8 @@ export interface IDevice extends Document {
   playlistId?: mongoose.Types.ObjectId;
   deviceToken: string;
   lastSeenAt: Date;
+  occupancy?: "occupied" | "unoccupied";
+  gender?: "male" | "female";
 }
 
 const deviceSchema = new Schema<IDevice>(
@@ -18,6 +20,8 @@ const deviceSchema = new Schema<IDevice>(
     playlistId: { type: Schema.Types.ObjectId, ref: "Playlist" },
     deviceToken: { type: String, required: true, unique: true },
     lastSeenAt: { type: Date, default: Date.now },
+    occupancy: { type: String, enum: ["occupied", "unoccupied"], default: null },
+    gender: { type: String, enum: ["male", "female"], default: null },
   },
   {
     timestamps: true,

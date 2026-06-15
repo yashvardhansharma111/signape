@@ -53,6 +53,8 @@ router.post(
       name: body.name.trim(),
       location: body.location.trim(),
       playlistId: body.playlistId,
+      occupancy: body.occupancy,
+      gender: body.gender,
     });
 
     res.status(201).json(device);

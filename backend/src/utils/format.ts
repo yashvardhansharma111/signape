@@ -30,6 +30,8 @@ export async function enrichDevice(device: IDevice) {
     lastSeenAt: device.lastSeenAt.toISOString(),
     playlist: playlist?.name ?? "None",
     lastSeen: formatLastSeen(device.lastSeenAt),
+    occupancy: device.occupancy ?? null,
+    gender: device.gender ?? null,
   };
 }
 

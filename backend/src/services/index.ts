@@ -81,6 +81,8 @@ export async function createDevice(input: CreateDeviceInput) {
     deviceToken: generateDeviceToken(),
     status: "offline",
     lastSeenAt: new Date(),
+    ...(input.occupancy ? { occupancy: input.occupancy } : {}),
+    ...(input.gender ? { gender: input.gender } : {}),
   });
 
   return enrichDevice(device);
