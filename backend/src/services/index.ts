@@ -96,9 +96,13 @@ export async function updateDevice(id: string, input: UpdateDeviceInput) {
     update.lastSeenAt = new Date();
   }
 
+  console.log("[updateDevice] id:", id, "update payload:", JSON.stringify(update));
   const device = await Device.findByIdAndUpdate(id, update, { new: true });
+  console.log("[updateDevice] saved doc occupancy:", device?.occupancy, "gender:", device?.gender);
   if (!device) return null;
-  return enrichDevice(device);
+  const enriched = await enrichDevice(device);
+  console.log("[updateDevice] enriched result occupancy:", enriched.occupancy, "gender:", enriched.gender);
+  return enriched;
 }
 
 export async function deleteDevice(id: string) {
