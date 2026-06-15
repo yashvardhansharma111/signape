@@ -12,20 +12,31 @@ import { patchDeviceStatus, useDashboardSocket } from "@/lib/useDashboardSocket"
 type ViewMode = "grid" | "list";
 
 // ── Live preview thumbnail ────────────────────────────────────────────────────
-function LivePreview({ items }: { items: DevicePreviewItem[] }) {
+function LivePreview({ items, status }: { items: DevicePreviewItem[]; status: "online" | "offline" }) {
   const [idx, setIdx] = useState(0);
 
   useEffect(() => {
-    if (items.length <= 1) return;
+    if (items.length <= 1 || status === "offline") return;
     const id = setInterval(() => setIdx((i) => (i + 1) % items.length), 5000);
     return () => clearInterval(id);
-  }, [items.length]);
+  }, [items.length, status]);
 
-  const base = "h-14 w-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center";
+  const base = "h-14 w-24 rounded-lg overflow-hidden flex-shrink-0 flex items-center justify-center";
+
+  if (status === "offline") {
+    return (
+      <div className={base} style={{ backgroundColor: "#FEE2E2" }}>
+        <div className="flex flex-col items-center gap-0.5">
+          <WifiOff className="h-4 w-4" style={{ color: "#dc2626" }} />
+          <span className="text-[9px] font-semibold" style={{ color: "#dc2626" }}>Offline</span>
+        </div>
+      </div>
+    );
+  }
 
   if (items.length === 0) {
     return (
-      <div className={base}>
+      <div className={base} style={{ backgroundColor: "#F3F4F6" }}>
         <Monitor className="h-5 w-5 text-gray-300" />
       </div>
     );
@@ -284,7 +295,7 @@ export default function ScreensPage() {
 
                 <div className="mb-3 flex items-start justify-between">
                   {/* Live preview thumbnail */}
-                  <LivePreview items={previews.get(screen.id) ?? []} />
+                  <LivePreview items={previews.get(screen.id) ?? []} status={screen.status} />
 
                   <div className="flex items-center gap-1.5 ml-3">
                     <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
@@ -357,7 +368,7 @@ export default function ScreensPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
-                      <LivePreview items={previews.get(screen.id) ?? []} />
+                      <LivePreview items={previews.get(screen.id) ?? []} status={screen.status} />
                     </td>
                     <td className="px-4 py-4">
                       <p className="text-base font-bold" style={{ color: "#042B19" }}>{screen.name}</p>
