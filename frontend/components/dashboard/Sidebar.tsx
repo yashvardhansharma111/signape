@@ -14,6 +14,8 @@ import {
   ChevronLeft,
   ChevronRight,
   LogOut,
+  LayoutTemplate,
+  Users,
 } from "lucide-react";
 import { api, type LiveDeviceStats } from "@/lib/api";
 import { clearAccessToken } from "@/lib/auth";
@@ -27,10 +29,12 @@ interface SidebarProps {
 const navItems = [
   { label: "Overview", href: "/dashboard", icon: LayoutDashboard },
   { label: "Screens", href: "/dashboard/screens", icon: Monitor },
+  { label: "Groups", href: "/dashboard/groups", icon: Users },
   { label: "Media Library", href: "/dashboard/media-library", icon: Library },
+  { label: "Contents", href: "/dashboard/contents", icon: LayoutTemplate },
   { label: "Playlists", href: "/dashboard/playlists", icon: ListVideo },
   { label: "Schedule", href: "/dashboard/schedule", icon: Calendar },
-  { label: "Present", href: "/dashboard/present", icon: Presentation },
+  { label: "Publish", href: "/dashboard/present", icon: Presentation },
   { label: "Settings", href: "/dashboard/settings", icon: Settings },
 ];
 

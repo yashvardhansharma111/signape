@@ -232,13 +232,90 @@ export default function OverviewPage() {
   );
 }
 
+function DonutChart({ online, offline }: { online: number; offline: number }) {
+  const total = online + offline;
+  const r = 54;
+  const cx = 70;
+  const cy = 70;
+  const strokeW = 18;
+  const circ = 2 * Math.PI * r;
+  const onlineLen = total > 0 ? (online / total) * circ : 0;
+  const offlineLen = total > 0 ? (offline / total) * circ : 0;
+
+  return (
+    <div className="flex items-center gap-6">
+      <div className="relative shrink-0">
+        <svg width="140" height="140" viewBox="0 0 140 140">
+          {/* track */}
+          <circle cx={cx} cy={cy} r={r} fill="none" stroke="#F3F4F6" strokeWidth={strokeW} />
+          {total === 0 ? null : (
+            <>
+              {/* online — green */}
+              {online > 0 && (
+                <circle
+                  cx={cx} cy={cy} r={r}
+                  fill="none" stroke="#16a34a" strokeWidth={strokeW}
+                  strokeDasharray={`${onlineLen} ${circ}`}
+                  strokeDashoffset={0}
+                  strokeLinecap="butt"
+                  transform={`rotate(-90 ${cx} ${cy})`}
+                />
+              )}
+              {/* offline — red */}
+              {offline > 0 && (
+                <circle
+                  cx={cx} cy={cy} r={r}
+                  fill="none" stroke="#dc2626" strokeWidth={strokeW}
+                  strokeDasharray={`${offlineLen} ${circ}`}
+                  strokeDashoffset={-onlineLen}
+                  strokeLinecap="butt"
+                  transform={`rotate(-90 ${cx} ${cy})`}
+                />
+              )}
+            </>
+          )}
+          <text x={cx} y={cy - 6} textAnchor="middle" fontSize="22" fontWeight="700" fill="#042B19">{total}</text>
+          <text x={cx} y={cy + 12} textAnchor="middle" fontSize="11" fill="#6B7280">Total</text>
+        </svg>
+      </div>
+      <div className="flex-1 space-y-3">
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-[#16a34a]" />
+            <span className="text-sm text-gray-600">Online</span>
+          </div>
+          <span className="text-sm font-bold" style={{ color: "#16a34a" }}>{online}</span>
+        </div>
+        <div className="flex items-center justify-between">
+          <div className="flex items-center gap-2">
+            <span className="h-3 w-3 rounded-full bg-[#dc2626]" />
+            <span className="text-sm text-gray-600">Offline</span>
+          </div>
+          <span className="text-sm font-bold text-[#dc2626]">{offline}</span>
+        </div>
+        <div className="border-t pt-3" style={{ borderColor: "#E5E7EB" }}>
+          <div className="flex items-center justify-between">
+            <span className="text-xs text-gray-500">Uptime</span>
+            <span className="text-xs font-semibold" style={{ color: "#042B19" }}>
+              {total > 0 ? Math.round((online / total) * 100) : 0}%
+            </span>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 function ScreenStatusCard({ screens }: { screens: Device[] }) {
+  const online = screens.filter((s) => s.status === "online").length;
+  const offline = screens.filter((s) => s.status === "offline").length;
+
   return (
     <div
       className="rounded-3xl border bg-white p-6 shadow-sm"
       style={{ borderColor: "#E5E7EB" }}
     >
-      <div className="mb-6 flex items-center justify-between">
+      <div className="mb-5 flex items-center justify-between">
         <h2 className="text-xl font-semibold" style={{ color: "#042B19" }}>
           Screen Status
         </h2>
@@ -246,45 +323,49 @@ function ScreenStatusCard({ screens }: { screens: Device[] }) {
           View all
         </Link>
       </div>
-      <div className="space-y-3">
-        {screens.length === 0 ? (
-          <p className="text-sm text-gray-500">No screens yet. Add one from the Screens page.</p>
-        ) : (
-          screens.map((screen) => (
-          <div
-            key={screen.id}
-            className="flex items-center justify-between rounded-lg border p-4"
-            style={{ borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" }}
-          >
-            <div className="flex items-center gap-3">
-              {screen.status === "online" ? (
-                <Wifi className="h-5 w-5" style={{ color: "#16a34a" }} />
-              ) : (
-                <WifiOff className="h-5 w-5 text-gray-400" />
-              )}
-              <div>
-                <p className="font-semibold" style={{ color: "#042B19" }}>
-                  {screen.name}
-                </p>
-                <p className="text-xs text-gray-500">{screen.location}</p>
-              </div>
-            </div>
-            <div className="text-right">
-              <span
-                className="inline-block rounded-full px-2 py-1 text-xs font-semibold capitalize"
-                style={{
-                  backgroundColor: screen.status === "online" ? "#DCFCE7" : "#F3F4F6",
-                  color: screen.status === "online" ? "#16a34a" : "#6B7280",
-                }}
-              >
-                {screen.status}
-              </span>
-              <p className="mt-1 text-xs text-gray-500">{screen.playlist}</p>
-            </div>
+
+      {screens.length === 0 ? (
+        <p className="text-sm text-gray-500">No screens yet. Add one from the Screens page.</p>
+      ) : (
+        <>
+          <div className="mb-5">
+            <DonutChart online={online} offline={offline} />
           </div>
-        ))
-        )}
-      </div>
+          <div className="space-y-2">
+            {screens.map((screen) => (
+              <div
+                key={screen.id}
+                className="flex items-center justify-between rounded-lg border p-3"
+                style={{ borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" }}
+              >
+                <div className="flex items-center gap-3">
+                  {screen.status === "online" ? (
+                    <Wifi className="h-4 w-4" style={{ color: "#16a34a" }} />
+                  ) : (
+                    <WifiOff className="h-4 w-4" style={{ color: "#dc2626" }} />
+                  )}
+                  <div>
+                    <p className="text-sm font-semibold" style={{ color: "#042B19" }}>{screen.name}</p>
+                    <p className="text-xs text-gray-500">{screen.location}</p>
+                  </div>
+                </div>
+                <div className="text-right">
+                  <span
+                    className="inline-block rounded-full px-2 py-1 text-xs font-semibold capitalize"
+                    style={{
+                      backgroundColor: screen.status === "online" ? "#DCFCE7" : "#FEE2E2",
+                      color: screen.status === "online" ? "#16a34a" : "#dc2626",
+                    }}
+                  >
+                    {screen.status}
+                  </span>
+                  <p className="mt-1 text-xs text-gray-500">{screen.playlist}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </>
+      )}
     </div>
   );
 }

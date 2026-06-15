@@ -86,7 +86,15 @@ export interface Playlist {
   status: "published" | "draft";
   itemCount: number;
   mediaIds: string[];
+  contentIds: string[];
   updatedAt: string;
+}
+
+export interface DeviceGroup {
+  id: string;
+  name: string;
+  deviceIds: string[];
+  devices: { id: string; name: string; status: "online" | "offline"; location: string }[];
 }
 
 export interface Schedule {
@@ -108,6 +116,33 @@ export interface MediaAsset {
   url: string;
   key: string;
   uploadedAt: string;
+}
+
+export interface CanvasElement {
+  id: string;
+  type: "image" | "video" | "text";
+  x: number;
+  y: number;
+  width: number;
+  height: number;
+  url?: string;
+  mediaName?: string;
+  text?: string;
+  fontSize?: number;
+  fontWeight?: string;
+  color?: string;
+  textAlign?: string;
+  backgroundColor?: string;
+}
+
+export interface ContentItem {
+  id: string;
+  name: string;
+  canvasWidth: number;
+  canvasHeight: number;
+  background: string;
+  elements: CanvasElement[];
+  updatedAt: string;
 }
 
 export const api = {
@@ -133,9 +168,9 @@ export const api = {
   createDevice: (data: { name: string; location: string; playlistId?: string }) =>
     request<Device>("/api/devices", { method: "POST", body: JSON.stringify(data) }),
   getPlaylists: () => request<Playlist[]>("/api/playlists"),
-  createPlaylist: (data: { name: string; status?: "published" | "draft"; mediaIds?: string[] }) =>
+  createPlaylist: (data: { name: string; status?: "published" | "draft"; mediaIds?: string[]; contentIds?: string[] }) =>
     request<Playlist>("/api/playlists", { method: "POST", body: JSON.stringify(data) }),
-  updatePlaylist: (id: string, data: Partial<{ name: string; status: "published" | "draft"; mediaIds: string[] }>) =>
+  updatePlaylist: (id: string, data: Partial<{ name: string; status: "published" | "draft"; mediaIds: string[]; contentIds: string[] }>) =>
     request<Playlist>(`/api/playlists/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   deletePlaylist: (id: string) => request<void>(`/api/playlists/${id}`, { method: "DELETE" }),
   getSchedules: () => request<Schedule[]>("/api/schedules"),
@@ -162,4 +197,17 @@ export const api = {
     }),
   stopPresent: () =>
     request<{ stopped: boolean; deviceIds: string[] }>("/api/present/stop", { method: "POST" }),
+  getContents: () => request<ContentItem[]>("/api/contents"),
+  getContent: (id: string) => request<ContentItem>(`/api/contents/${id}`),
+  createContent: (data: { name: string; canvasWidth: number; canvasHeight: number; background: string }) =>
+    request<ContentItem>("/api/contents", { method: "POST", body: JSON.stringify(data) }),
+  updateContent: (id: string, data: Partial<ContentItem>) =>
+    request<ContentItem>(`/api/contents/${id}`, { method: "PUT", body: JSON.stringify(data) }),
+  deleteContent: (id: string) => request<void>(`/api/contents/${id}`, { method: "DELETE" }),
+  getDeviceGroups: () => request<DeviceGroup[]>("/api/device-groups"),
+  createDeviceGroup: (data: { name: string; deviceIds?: string[] }) =>
+    request<DeviceGroup>("/api/device-groups", { method: "POST", body: JSON.stringify(data) }),
+  updateDeviceGroup: (id: string, data: { name?: string; deviceIds?: string[] }) =>
+    request<DeviceGroup>(`/api/device-groups/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteDeviceGroup: (id: string) => request<void>(`/api/device-groups/${id}`, { method: "DELETE" }),
 };
