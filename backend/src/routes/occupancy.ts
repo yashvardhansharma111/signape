@@ -25,6 +25,7 @@ router.get("/live", asyncHandler(async (req, res) => {
     occupancy: d.occupancy ?? null,
     gender: d.gender ?? null,
     lastSeenAt: d.lastSeenAt,
+    deviceToken: d.deviceToken,
   }));
 
   res.json(result);

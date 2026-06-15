@@ -52,6 +52,7 @@ export interface LiveOccupancyDevice {
   status: "online" | "offline";
   occupancy: "occupied" | "unoccupied" | null;
   gender: "male" | "female" | null;
+  deviceToken: string;
 }
 
 export interface OccupancyFloorStat {

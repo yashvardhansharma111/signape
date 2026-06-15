@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users, Filter, RefreshCw, Building2, UserCheck, UserX,
-  ChevronDown, Calendar, Pencil, X,
+  ChevronDown, Calendar, Pencil, X, Copy, ExternalLink,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import {
@@ -94,7 +94,13 @@ function StatCard({ label, value, sub, bg, color, icon }: {
   );
 }
 
-function DeviceCard({ device, onEdit }: { device: LiveOccupancyDevice; onEdit: () => void }) {
+function DeviceCard({ device, onEdit, onCopy, displayUrl, copied }: {
+  device: LiveOccupancyDevice;
+  onEdit: () => void;
+  onCopy: () => void;
+  displayUrl: string;
+  copied: boolean;
+}) {
   const accent = device.occupancy === "occupied" ? OCC_RED
     : device.occupancy === "unoccupied" ? OCC_GREEN
     : "#9CA3AF";
@@ -106,7 +112,7 @@ function DeviceCard({ device, onEdit }: { device: LiveOccupancyDevice; onEdit: (
           <p className="text-xs text-gray-400 truncate">{device.floor || device.location}</p>
           <p className="mt-0.5 text-sm font-bold text-[#042B19] truncate">{device.name}</p>
         </div>
-        <div className="flex items-center gap-1.5 ml-2">
+        <div className="flex items-center gap-1 ml-2">
           <div className={`h-2 w-2 flex-shrink-0 rounded-full ${device.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
           <button type="button" onClick={onEdit} title="Edit tags"
             className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-[#042B19] transition">
@@ -114,6 +120,7 @@ function DeviceCard({ device, onEdit }: { device: LiveOccupancyDevice; onEdit: (
           </button>
         </div>
       </div>
+
       <div className="flex flex-wrap gap-1.5 mt-2">
         <OccupancyBadge value={device.occupancy} />
         {device.occupancy === "occupied"
@@ -121,6 +128,18 @@ function DeviceCard({ device, onEdit }: { device: LiveOccupancyDevice; onEdit: (
           : <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-gray-400"
               style={{ backgroundColor: "#F3F4F6", border: "1.5px solid #E5E7EB" }}>—</span>
         }
+      </div>
+
+      <div className="mt-3 flex gap-2 border-t pt-3" style={{ borderColor: "#F3F4F6" }}>
+        <button type="button" onClick={onCopy}
+          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg border border-[#E5E7EB] py-1.5 text-xs font-medium text-[#042B19] hover:bg-gray-50 transition">
+          <Copy className="h-3 w-3" />
+          {copied ? "Copied!" : "Copy link"}
+        </button>
+        <a href={displayUrl} target="_blank" rel="noopener noreferrer"
+          className="inline-flex flex-1 items-center justify-center gap-1 rounded-lg bg-[#16a34a] py-1.5 text-xs font-medium text-white hover:opacity-90 transition">
+          <ExternalLink className="h-3 w-3" /> Open
+        </a>
       </div>
     </div>
   );
@@ -303,6 +322,7 @@ export default function OccupancyPage() {
   const [loading,       setLoading]       = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [editingDevice, setEditingDevice] = useState<LiveOccupancyDevice | null>(null);
+  const [copiedId,      setCopiedId]      = useState<string | null>(null);
 
   const [floor,  setFloor]  = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -368,6 +388,15 @@ export default function OccupancyPage() {
     if (v === "male")   return GEN.male;
     if (v === "female") return GEN.female;
     return ALL_ACTIVE;
+  };
+
+  const getDisplayUrl = (d: LiveOccupancyDevice) =>
+    `${typeof window !== "undefined" ? window.location.origin : ""}/display/${d.id}?token=${d.deviceToken}`;
+
+  const copyDisplayUrl = async (d: LiveOccupancyDevice) => {
+    await navigator.clipboard.writeText(getDisplayUrl(d));
+    setCopiedId(d.id);
+    setTimeout(() => setCopiedId(null), 2000);
   };
 
   const handleTagSaved = (
@@ -476,7 +505,16 @@ export default function OccupancyPage() {
               <p className="text-sm text-gray-400">No screens match the selected filters.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {devices.map((d) => <DeviceCard key={d.id} device={d} onEdit={() => setEditingDevice(d)} />)}
+                {devices.map((d) => (
+                  <DeviceCard
+                    key={d.id}
+                    device={d}
+                    onEdit={() => setEditingDevice(d)}
+                    onCopy={() => copyDisplayUrl(d)}
+                    displayUrl={getDisplayUrl(d)}
+                    copied={copiedId === d.id}
+                  />
+                ))}
               </div>
             )}
           </div>
