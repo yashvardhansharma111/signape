@@ -7,8 +7,8 @@ const router = Router();
 
 router.get(
   "/",
-  asyncHandler(async (_req, res) => {
-    res.json(await getSettings());
+  asyncHandler(async (req, res) => {
+    res.json(await getSettings(req.user!.id, req.user));
   })
 );
 
@@ -16,7 +16,7 @@ router.patch(
   "/",
   asyncHandler(async (req, res) => {
     const body = req.body as UpdateSettingsInput;
-    res.json(await updateSettings(body));
+    res.json(await updateSettings(req.user!.id, body));
   })
 );
 

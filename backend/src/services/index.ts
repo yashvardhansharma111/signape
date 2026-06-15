@@ -271,10 +271,15 @@ export async function deleteSchedule(id: string) {
   return Boolean(result);
 }
 
-export async function getSettings() {
-  let settings = await Settings.findOne();
+export async function getSettings(userId: string, user?: { email: string; displayName: string; organization: string }) {
+  let settings = await Settings.findOne({ userId });
   if (!settings) {
-    settings = await Settings.create({});
+    settings = await Settings.create({
+      userId,
+      displayName: user?.displayName ?? "",
+      email: user?.email ?? "",
+      organization: user?.organization ?? "",
+    });
   }
   const json = settings.toJSON();
   return {
@@ -286,15 +291,15 @@ export async function getSettings() {
   };
 }
 
-export async function updateSettings(input: UpdateSettingsInput) {
-  let settings = await Settings.findOne();
+export async function updateSettings(userId: string, input: UpdateSettingsInput) {
+  let settings = await Settings.findOne({ userId });
   if (!settings) {
-    settings = await Settings.create(input);
+    settings = await Settings.create({ userId, ...input });
   } else {
     Object.assign(settings, input);
     await settings.save();
   }
-  return getSettings();
+  return getSettings(userId);
 }
 
 async function getPresentSessionDoc() {
