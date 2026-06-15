@@ -160,4 +160,6 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ playlistId, deviceIds }),
     }),
+  stopPresent: () =>
+    request<{ stopped: boolean; deviceIds: string[] }>("/api/present/stop", { method: "POST" }),
 };

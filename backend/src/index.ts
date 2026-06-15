@@ -4,6 +4,7 @@ import { connectDb, disconnectDb } from "./db/connection.js";
 import { env } from "./config/env.js";
 import { attachSocketServer } from "./socket/index.js";
 import { ensureDeviceTokens } from "./services/index.js";
+import { startScheduler } from "./services/scheduler.js";
 
 let server: Server | undefined;
 
@@ -16,6 +17,7 @@ async function main() {
   });
 
   attachSocketServer(server);
+  await startScheduler();
 
   server.on("error", (error: NodeJS.ErrnoException) => {
     if (error.code === "EADDRINUSE") {

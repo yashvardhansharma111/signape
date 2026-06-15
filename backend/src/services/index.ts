@@ -370,6 +370,21 @@ export async function startPresent(input: StartPresentInput) {
   };
 }
 
+export async function stopPresent() {
+  const session = await getPresentSessionDoc();
+  const deviceIds = session.deviceIds.map((id) => id.toString());
+
+  session.playlistId = undefined as unknown as mongoose.Types.ObjectId;
+  session.deviceIds = [];
+  session.startedAt = null;
+  await session.save();
+
+  const { emitPresentStop } = await import("../socket/index.js");
+  emitPresentStop(deviceIds);
+
+  return { stopped: true, deviceIds };
+}
+
 export async function getOverviewStats(): Promise<OverviewStats> {
   const weekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000);
   const now = new Date();

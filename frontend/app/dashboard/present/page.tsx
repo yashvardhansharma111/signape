@@ -1,7 +1,7 @@
 "use client";
 
 import { useCallback, useEffect, useState } from "react";
-import { Monitor, Play, Presentation, Wifi, WifiOff } from "lucide-react";
+import { Monitor, Play, Presentation, Square, Wifi, WifiOff } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import { api, type PresentResponse } from "@/lib/api";
 import { patchDeviceStatus, useDashboardSocket } from "@/lib/useDashboardSocket";
@@ -12,6 +12,8 @@ export default function PresentPage() {
   const [selectedIds, setSelectedIds] = useState<string[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
+  const [stopping, setStopping] = useState(false);
+  const [isLive, setIsLive] = useState(false);
   const [message, setMessage] = useState("");
 
   const loadPresent = useCallback(() => {
@@ -20,6 +22,7 @@ export default function PresentPage() {
         setData(response);
         setPlaylistId(response.playlistId);
         setSelectedIds(response.deviceIds);
+        setIsLive(!!response.startedAt && response.deviceIds.length > 0);
       })
       .catch(console.error)
       .finally(() => setLoading(false));
@@ -67,12 +70,28 @@ export default function PresentPage() {
     setMessage("");
     try {
       const result = await api.startPresent(playlistId, selectedIds);
+      setIsLive(true);
       setMessage(`Streaming started on ${result.deliveredTo ?? selectedIds.length} screen(s).`);
     } catch (error) {
       console.error(error);
       setMessage("Failed to start presentation.");
     } finally {
       setSubmitting(false);
+    }
+  };
+
+  const handleStop = async () => {
+    setStopping(true);
+    setMessage("");
+    try {
+      await api.stopPresent();
+      setIsLive(false);
+      setMessage("Presentation stopped on all screens.");
+    } catch (error) {
+      console.error(error);
+      setMessage("Failed to stop presentation.");
+    } finally {
+      setStopping(false);
     }
   };
 
@@ -96,9 +115,17 @@ export default function PresentPage() {
               className="rounded-3xl border bg-white p-6 shadow-sm"
               style={{ borderColor: "#E5E7EB" }}
             >
-              <div className="mb-6 flex items-center gap-2">
-                <Presentation className="h-5 w-5 text-[#16a34a]" />
-                <h2 className="text-lg font-semibold text-[#042B19]">Live presentation</h2>
+              <div className="mb-6 flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <Presentation className="h-5 w-5 text-[#16a34a]" />
+                  <h2 className="text-lg font-semibold text-[#042B19]">Live presentation</h2>
+                </div>
+                {isLive && (
+                  <span className="flex items-center gap-1.5 rounded-full bg-red-100 px-3 py-1 text-xs font-semibold text-red-600">
+                    <span className="h-2 w-2 animate-pulse rounded-full bg-red-500" />
+                    LIVE
+                  </span>
+                )}
               </div>
 
               <div className="mb-6 space-y-4">
@@ -156,15 +183,28 @@ export default function PresentPage() {
                 </div>
               </div>
 
-              <button
-                type="button"
-                onClick={handleStart}
-                disabled={submitting || selectedIds.length === 0}
-                className="flex w-full items-center justify-center gap-2 rounded-lg bg-[#16a34a] px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-50"
-              >
-                <Play className="h-4 w-4" />
-                {submitting ? "Starting..." : "Start presenting"}
-              </button>
+              <div className="flex gap-3">
+                <button
+                  type="button"
+                  onClick={handleStart}
+                  disabled={submitting || stopping || selectedIds.length === 0}
+                  className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#16a34a] px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                >
+                  <Play className="h-4 w-4" />
+                  {submitting ? "Starting..." : "Start presenting"}
+                </button>
+                {isLive && (
+                  <button
+                    type="button"
+                    onClick={handleStop}
+                    disabled={stopping || submitting}
+                    className="flex items-center justify-center gap-2 rounded-lg bg-red-600 px-6 py-3 font-semibold text-white hover:opacity-90 disabled:opacity-50"
+                  >
+                    <Square className="h-4 w-4" />
+                    {stopping ? "Stopping..." : "Stop"}
+                  </button>
+                )}
+              </div>
 
               {message && (
                 <p className="mt-4 text-center text-sm font-medium text-[#16a34a]">{message}</p>

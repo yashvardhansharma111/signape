@@ -1,6 +1,6 @@
 import { Router } from "express";
 import { asyncHandler } from "../middleware/asyncHandler.js";
-import { getPresentSession, startPresent } from "../services/index.js";
+import { getPresentSession, startPresent, stopPresent } from "../services/index.js";
 import type { StartPresentInput } from "../types/index.js";
 
 const router = Router();
@@ -24,6 +24,13 @@ router.post(
 
     const session = await startPresent(body);
     res.json(session);
+  })
+);
+
+router.post(
+  "/stop",
+  asyncHandler(async (_req, res) => {
+    res.json(await stopPresent());
   })
 );
 
