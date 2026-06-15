@@ -431,11 +431,18 @@ export async function getOverviewStats(): Promise<OverviewStats> {
 }
 
 export async function getOverview() {
-  const [stats, liveDevices, recentDevices, present] = await Promise.all([
+  const [stats, liveDevices, recentDevices, present,
+    occupiedCount, unoccupiedCount, maleCount, femaleCount, totalDevices,
+  ] = await Promise.all([
     getOverviewStats(),
     getLiveDeviceStats(),
     Device.find().sort({ updatedAt: -1 }).limit(4),
     getPresentSessionDoc(),
+    Device.countDocuments({ occupancy: "occupied" }),
+    Device.countDocuments({ occupancy: "unoccupied" }),
+    Device.countDocuments({ gender: "male" }),
+    Device.countDocuments({ gender: "female" }),
+    Device.countDocuments(),
   ]);
 
   const recentScreens = await Promise.all(recentDevices.map(enrichDevice));
@@ -444,6 +451,15 @@ export async function getOverview() {
     stats,
     liveDevices,
     recentScreens,
+    deviceTags: {
+      total: totalDevices,
+      occupied: occupiedCount,
+      unoccupied: unoccupiedCount,
+      untaggedOccupancy: totalDevices - occupiedCount - unoccupiedCount,
+      male: maleCount,
+      female: femaleCount,
+      untaggedGender: totalDevices - maleCount - femaleCount,
+    },
     quickPresent: {
       playlist: present.playlistId
         ? await getPlaylistName(present.playlistId.toString())

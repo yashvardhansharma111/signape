@@ -54,10 +54,21 @@ export interface OverviewStats {
   nextScheduleIn: string;
 }
 
+export interface DeviceTagStats {
+  total: number;
+  occupied: number;
+  unoccupied: number;
+  untaggedOccupancy: number;
+  male: number;
+  female: number;
+  untaggedGender: number;
+}
+
 export interface OverviewResponse {
   stats: OverviewStats;
   liveDevices: LiveDeviceStats;
   recentScreens: Device[];
+  deviceTags: DeviceTagStats;
   quickPresent: {
     playlist: string;
     selectedDevices: number;
