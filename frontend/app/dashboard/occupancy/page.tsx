@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users, Filter, RefreshCw, Building2, UserCheck, UserX,
-  ChevronDown, Calendar,
+  ChevronDown, Calendar, Pencil, X,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import {
@@ -94,7 +94,7 @@ function StatCard({ label, value, sub, bg, color, icon }: {
   );
 }
 
-function DeviceCard({ device }: { device: LiveOccupancyDevice }) {
+function DeviceCard({ device, onEdit }: { device: LiveOccupancyDevice; onEdit: () => void }) {
   const accent = device.occupancy === "occupied" ? OCC_RED
     : device.occupancy === "unoccupied" ? OCC_GREEN
     : "#9CA3AF";
@@ -106,7 +106,13 @@ function DeviceCard({ device }: { device: LiveOccupancyDevice }) {
           <p className="text-xs text-gray-400 truncate">{device.floor || device.location}</p>
           <p className="mt-0.5 text-sm font-bold text-[#042B19] truncate">{device.name}</p>
         </div>
-        <div className={`ml-2 mt-1.5 h-2 w-2 flex-shrink-0 rounded-full ${device.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+        <div className="flex items-center gap-1.5 ml-2">
+          <div className={`h-2 w-2 flex-shrink-0 rounded-full ${device.status === "online" ? "bg-green-500" : "bg-red-400"}`} />
+          <button type="button" onClick={onEdit} title="Edit tags"
+            className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-[#042B19] transition">
+            <Pencil className="h-3.5 w-3.5" />
+          </button>
+        </div>
       </div>
       <div className="flex flex-wrap gap-1.5 mt-2">
         <OccupancyBadge value={device.occupancy} />
@@ -115,6 +121,95 @@ function DeviceCard({ device }: { device: LiveOccupancyDevice }) {
           : <span className="inline-flex items-center rounded-full px-2.5 py-1 text-xs font-semibold text-gray-400"
               style={{ backgroundColor: "#F3F4F6", border: "1.5px solid #E5E7EB" }}>—</span>
         }
+      </div>
+    </div>
+  );
+}
+
+function EditTagModal({ device, onClose, onSaved }: {
+  device: LiveOccupancyDevice;
+  onClose: () => void;
+  onSaved: (id: string, occupancy: "occupied" | "unoccupied" | null, gender: "male" | "female" | null) => void;
+}) {
+  const [occupancy, setOccupancy] = useState<"occupied" | "unoccupied" | null>(device.occupancy);
+  const [gender,    setGender]    = useState<"male" | "female" | null>(device.gender);
+  const [saving,    setSaving]    = useState(false);
+
+  const handleSave = async () => {
+    setSaving(true);
+    try {
+      await api.updateDevice(device.id, { occupancy, gender });
+      onSaved(device.id, occupancy, gender);
+      onClose();
+    } catch (e) { console.error(e); }
+    finally { setSaving(false); }
+  };
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-4" style={{ backgroundColor: "rgba(0,0,0,0.5)" }}>
+      <div className="w-full max-w-sm rounded-2xl bg-white shadow-2xl">
+        <div className="flex items-center justify-between border-b px-5 py-4" style={{ borderColor: "#E5E7EB" }}>
+          <div>
+            <h3 className="font-semibold text-[#042B19]">{device.name}</h3>
+            <p className="text-xs text-gray-400">{device.floor || device.location}</p>
+          </div>
+          <button type="button" onClick={onClose} className="text-gray-400 hover:text-gray-600">
+            <X className="h-5 w-5" />
+          </button>
+        </div>
+
+        <div className="space-y-5 px-5 py-5">
+          {/* Occupancy */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-gray-500">Occupancy</p>
+            <div className="flex gap-2">
+              {(["occupied", "unoccupied"] as const).map((v) => {
+                const active = occupancy === v;
+                const s = active ? OCC[v] : NEUTRAL;
+                return (
+                  <button key={v} type="button"
+                    onClick={() => setOccupancy(active ? null : v)}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
+                    style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}>
+                    {v === "occupied" ? <UserCheck size={11} /> : <UserX size={11} />}
+                    {v === "unoccupied" ? "Vacant" : v}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* Gender */}
+          <div>
+            <p className="mb-2 text-xs font-medium text-gray-500">Gender</p>
+            <div className="flex gap-2">
+              {(["male", "female"] as const).map((v) => {
+                const active = gender === v;
+                const s = active ? GEN[v] : NEUTRAL;
+                return (
+                  <button key={v} type="button"
+                    onClick={() => setGender(active ? null : v)}
+                    className="inline-flex items-center gap-1.5 rounded-full px-3 py-1.5 text-xs font-semibold capitalize transition"
+                    style={{ backgroundColor: s.bg, color: s.text, border: `1.5px solid ${s.border}` }}>
+                    {v === "male" ? <MaleIcon size={11} color={s.text} /> : <FemaleIcon size={11} color={s.text} />}
+                    {v}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        </div>
+
+        <div className="flex gap-3 border-t px-5 py-4" style={{ borderColor: "#E5E7EB" }}>
+          <button type="button" onClick={onClose}
+            className="flex-1 rounded-lg border border-[#E5E7EB] py-2.5 text-sm font-medium text-gray-700 hover:bg-gray-50">
+            Cancel
+          </button>
+          <button type="button" onClick={handleSave} disabled={saving}
+            className="flex-1 rounded-lg bg-[#16a34a] py-2.5 text-sm font-semibold text-white hover:opacity-90 disabled:opacity-50">
+            {saving ? "Saving..." : "Save"}
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -192,12 +287,13 @@ type Period       = "day" | "month" | "year";
 const ALL_ACTIVE = { bg: "#E8F5F0", text: "#042B19", border: "#042B19" };
 
 export default function OccupancyPage() {
-  const [summary,    setSummary]    = useState<OccupancySummary | null>(null);
-  const [devices,    setDevices]    = useState<LiveOccupancyDevice[]>([]);
-  const [floors,     setFloors]     = useState<string[]>([]);
-  const [history,    setHistory]    = useState<OccupancyHistory | null>(null);
-  const [loading,    setLoading]    = useState(true);
-  const [refreshing, setRefreshing] = useState(false);
+  const [summary,       setSummary]       = useState<OccupancySummary | null>(null);
+  const [devices,       setDevices]       = useState<LiveOccupancyDevice[]>([]);
+  const [floors,        setFloors]        = useState<string[]>([]);
+  const [history,       setHistory]       = useState<OccupancyHistory | null>(null);
+  const [loading,       setLoading]       = useState(true);
+  const [refreshing,    setRefreshing]    = useState(false);
+  const [editingDevice, setEditingDevice] = useState<LiveOccupancyDevice | null>(null);
 
   const [floor,  setFloor]  = useState("all");
   const [status, setStatus] = useState<StatusFilter>("all");
@@ -265,9 +361,24 @@ export default function OccupancyPage() {
     return ALL_ACTIVE;
   };
 
+  const handleTagSaved = (
+    id: string,
+    occupancy: "occupied" | "unoccupied" | null,
+    gender: "male" | "female" | null,
+  ) => {
+    setDevices((prev) => prev.map((d) => d.id === id ? { ...d, occupancy, gender } : d));
+  };
+
   return (
     <div>
       <DashboardHeader title="Occupancy" subtitle="Real-time occupancy monitoring and reporting." />
+      {editingDevice && (
+        <EditTagModal
+          device={editingDevice}
+          onClose={() => setEditingDevice(null)}
+          onSaved={handleTagSaved}
+        />
+      )}
       <main className="p-6 space-y-6">
 
         {/* Filter bar */}
@@ -339,8 +450,10 @@ export default function OccupancyPage() {
           <StatCard label="Female"        value={occ.female}     sub={`${100 - malePct}% of tagged`} bg={FEMALE_LIGHT} color={FEMALE_TEXT} icon={<FemaleIcon size={20} color={FEMALE_TEXT} />} />
         </div>
 
-        {/* Live device grid + Floor chart */}
+        {/* Live device grid + right sidebar */}
         <div className="grid grid-cols-1 gap-6 lg:grid-cols-3">
+
+          {/* Device grid */}
           <div className="lg:col-span-2 rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
             <div className="mb-4 flex items-center justify-between">
               <h2 className="text-sm font-semibold" style={{ color: "#042B19" }}>
@@ -354,64 +467,69 @@ export default function OccupancyPage() {
               <p className="text-sm text-gray-400">No screens match the selected filters.</p>
             ) : (
               <div className="grid grid-cols-1 gap-3 sm:grid-cols-2 xl:grid-cols-3">
-                {devices.map((d) => <DeviceCard key={d.id} device={d} />)}
+                {devices.map((d) => <DeviceCard key={d.id} device={d} onEdit={() => setEditingDevice(d)} />)}
               </div>
             )}
           </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
-            <div className="mb-4 flex items-center gap-2">
-              <Building2 className="h-4 w-4 text-gray-400" />
-              <h2 className="text-sm font-semibold" style={{ color: "#042B19" }}>By Floor</h2>
-            </div>
-            <FloorChart floors={occ.floors} />
-          </div>
-        </div>
+          {/* Right sidebar: floor chart → occupancy ratio → gender ratio */}
+          <div className="space-y-4">
 
-        {/* Ratio bars */}
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2">
-          <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
-            <p className="mb-3 text-sm font-semibold" style={{ color: "#042B19" }}>Occupancy Ratio</p>
-            <div className="mb-2 flex overflow-hidden rounded-full h-6 bg-gray-100">
-              {occ.total > 0 && <>
-                <div style={{ width: `${(occ.occupied / occ.total) * 100}%`, backgroundColor: OCC_RED }}
-                  className="flex items-center justify-center text-[10px] font-bold text-white" title="Occupied">
-                  {occPct > 8 ? `${occPct}%` : ""}
-                </div>
-                <div style={{ width: `${(occ.unoccupied / occ.total) * 100}%`, backgroundColor: OCC_GREEN }}
-                  className="flex items-center justify-center text-[10px] font-bold text-white" title="Vacant">
-                  {(100 - occPct) > 8 ? `${100 - occPct}%` : ""}
-                </div>
-                <div style={{ width: `${(occ.untaggedOccupancy / occ.total) * 100}%`, backgroundColor: "#E5E7EB" }} title="Untagged" />
-              </>}
+            {/* By Floor */}
+            <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
+              <div className="mb-4 flex items-center gap-2">
+                <Building2 className="h-4 w-4 text-gray-400" />
+                <h2 className="text-sm font-semibold" style={{ color: "#042B19" }}>By Floor</h2>
+              </div>
+              <FloorChart floors={occ.floors} />
             </div>
-            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: OCC_RED }} /> Occupied ({occ.occupied})</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: OCC_GREEN }} /> Vacant ({occ.unoccupied})</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block bg-gray-200" /> Untagged ({occ.untaggedOccupancy})</span>
-            </div>
-          </div>
 
-          <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
-            <p className="mb-3 text-sm font-semibold" style={{ color: "#042B19" }}>Gender Ratio</p>
-            <div className="mb-2 flex overflow-hidden rounded-full h-6 bg-gray-100">
-              {occ.total > 0 && <>
-                <div style={{ width: `${(occ.male / occ.total) * 100}%`, backgroundColor: GEN.male.border }}
-                  className="flex items-center justify-center text-[10px] font-bold text-white" title="Male">
-                  {malePct > 8 ? `${malePct}%` : ""}
-                </div>
-                <div style={{ width: `${(occ.female / occ.total) * 100}%`, backgroundColor: GEN.female.border }}
-                  className="flex items-center justify-center text-[10px] font-bold text-white" title="Female">
-                  {(100 - malePct) > 8 ? `${100 - malePct}%` : ""}
-                </div>
-                <div style={{ width: `${(occ.untaggedGender / occ.total) * 100}%`, backgroundColor: "#E5E7EB" }} title="Untagged" />
-              </>}
+            {/* Occupancy Ratio */}
+            <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
+              <p className="mb-3 text-sm font-semibold" style={{ color: "#042B19" }}>Occupancy Ratio</p>
+              <div className="mb-2 flex overflow-hidden rounded-full h-5 bg-gray-100">
+                {occ.total > 0 && <>
+                  <div style={{ width: `${(occ.occupied / occ.total) * 100}%`, backgroundColor: OCC_RED }}
+                    className="flex items-center justify-center text-[10px] font-bold text-white" title="Occupied">
+                    {occPct > 8 ? `${occPct}%` : ""}
+                  </div>
+                  <div style={{ width: `${(occ.unoccupied / occ.total) * 100}%`, backgroundColor: OCC_GREEN }}
+                    className="flex items-center justify-center text-[10px] font-bold text-white" title="Vacant">
+                    {(100 - occPct) > 8 ? `${100 - occPct}%` : ""}
+                  </div>
+                  <div style={{ width: `${(occ.untaggedOccupancy / occ.total) * 100}%`, backgroundColor: "#E5E7EB" }} title="Untagged" />
+                </>}
+              </div>
+              <div className="flex flex-col gap-1 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: OCC_RED }} /> Occupied ({occ.occupied})</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: OCC_GREEN }} /> Vacant ({occ.unoccupied})</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block bg-gray-200" /> Untagged ({occ.untaggedOccupancy})</span>
+              </div>
             </div>
-            <div className="flex flex-wrap gap-4 text-xs text-gray-500">
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: GEN.male.border }} /> Male ({occ.male})</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: GEN.female.border }} /> Female ({occ.female})</span>
-              <span className="flex items-center gap-1"><span className="h-2 w-2 rounded-full inline-block bg-gray-200" /> Untagged ({occ.untaggedGender})</span>
+
+            {/* Gender Ratio */}
+            <div className="rounded-2xl border bg-white p-5 shadow-sm" style={{ borderColor: "#E5E7EB" }}>
+              <p className="mb-3 text-sm font-semibold" style={{ color: "#042B19" }}>Gender Ratio</p>
+              <div className="mb-2 flex overflow-hidden rounded-full h-5 bg-gray-100">
+                {occ.total > 0 && <>
+                  <div style={{ width: `${(occ.male / occ.total) * 100}%`, backgroundColor: GEN.male.border }}
+                    className="flex items-center justify-center text-[10px] font-bold text-white" title="Male">
+                    {malePct > 8 ? `${malePct}%` : ""}
+                  </div>
+                  <div style={{ width: `${(occ.female / occ.total) * 100}%`, backgroundColor: GEN.female.border }}
+                    className="flex items-center justify-center text-[10px] font-bold text-white" title="Female">
+                    {(100 - malePct) > 8 ? `${100 - malePct}%` : ""}
+                  </div>
+                  <div style={{ width: `${(occ.untaggedGender / occ.total) * 100}%`, backgroundColor: "#E5E7EB" }} title="Untagged" />
+                </>}
+              </div>
+              <div className="flex flex-col gap-1 text-xs text-gray-500">
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: GEN.male.border }} /> Male ({occ.male})</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block" style={{ backgroundColor: GEN.female.border }} /> Female ({occ.female})</span>
+                <span className="flex items-center gap-1.5"><span className="h-2 w-2 rounded-full inline-block bg-gray-200" /> Untagged ({occ.untaggedGender})</span>
+              </div>
             </div>
+
           </div>
         </div>
 
