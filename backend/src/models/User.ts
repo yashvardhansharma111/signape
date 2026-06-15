@@ -15,6 +15,8 @@ export interface IUser extends Document {
   firstTimeLogin: boolean;
   resetToken?: string;
   resetTokenExpiry?: Date;
+  createdAt: Date;
+  updatedAt: Date;
 }
 
 const userSchema = new Schema<IUser>(

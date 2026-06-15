@@ -17,7 +17,7 @@ export function middleware(request: NextRequest) {
   const isRoom           = pathname.startsWith("/room");
   const isAdmin          = pathname.startsWith("/admin");
 
-  // Unauthenticated public pages — always allow if not logged in
+  // Unauthenticated public pages — always allow
   if (isForgot || isReset || isPending) return NextResponse.next();
 
   // Not logged in
