@@ -3,6 +3,7 @@ export type DeviceStatus = "online" | "offline";
 export interface CreateDeviceInput {
   name: string;
   location: string;
+  floor?: string;
   playlistId?: string;
   occupancy?: "occupied" | "unoccupied";
   gender?: "male" | "female";
@@ -11,6 +12,7 @@ export interface CreateDeviceInput {
 export interface UpdateDeviceInput {
   name?: string;
   location?: string;
+  floor?: string;
   status?: DeviceStatus;
   playlistId?: string;
   occupancy?: "occupied" | "unoccupied" | null;

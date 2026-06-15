@@ -4,9 +4,9 @@ export default function SignupPage() {
   return (
     <>
       <h1 className="mb-2 text-2xl font-bold" style={{ color: "#042B19" }}>
-        Create your account
+        Request access
       </h1>
-      <p className="mb-6 text-sm text-gray-500">Get started with AIM4IT in seconds</p>
+      <p className="mb-6 text-sm text-gray-500">Submit your details and wait for admin approval</p>
       <SignupForm />
     </>
   );

@@ -32,4 +32,7 @@ export const env = {
   mongodbUri: getMongoUri(),
   jwtSecret: getJwtSecret(),
   jwtExpiresIn: process.env.JWT_EXPIRES_IN ?? "7d",
+  smtpEmail: process.env.SMTP_EMAIL ?? "",
+  smtpPassword: process.env.SMTP_PASSWORD ?? "",
+  appUrl: process.env.APP_URL ?? "http://localhost:3000",
 };

@@ -47,7 +47,6 @@ const NEUTRAL = { bg: "#F3F4F6", text: "#9CA3AF", border: "#E5E7EB" };
 
 // ── Inline badge components ───────────────────────────────────────────────────
 function OccupancyBadge({ value }: { value: Occupancy }) {
-  console.log("[OccupancyBadge] value=", value, typeof value);
   const s = value ? OCC[value] : NEUTRAL;
   return (
     <span
@@ -63,7 +62,6 @@ function OccupancyBadge({ value }: { value: Occupancy }) {
 }
 
 function GenderBadge({ value }: { value: Gender }) {
-  console.log("[GenderBadge] value=", value, typeof value);
   const s = value ? GEN[value] : NEUTRAL;
   return (
     <span
@@ -121,21 +119,19 @@ function EditModal({ device, onClose, onSaved }: {
   onClose: () => void;
   onSaved: (updated: Device) => void;
 }) {
+  const [floor, setFloor]         = useState(device.floor ?? "");
   const [occupancy, setOccupancy] = useState<Occupancy>(device.occupancy);
   const [gender, setGender]       = useState<Gender>(device.gender);
   const [saving, setSaving]       = useState(false);
 
   const handleSave = async () => {
     setSaving(true);
-    console.log("[EditModal] Saving device:", device.id, { occupancy, gender });
     try {
-      const updated = await api.updateDevice(device.id, { occupancy, gender });
-      console.log("[EditModal] API response:", updated);
-      console.log("[EditModal] occupancy in response:", updated.occupancy, "| gender:", updated.gender);
+      const updated = await api.updateDevice(device.id, { floor: floor.trim() || undefined, occupancy, gender });
       onSaved(updated);
       onClose();
     } catch (e) {
-      console.error("[EditModal] Save failed:", e);
+      console.error(e);
     } finally {
       setSaving(false);
     }
@@ -155,6 +151,16 @@ function EditModal({ device, onClose, onSaved }: {
         </div>
 
         <div className="space-y-5 px-5 py-5">
+          <div>
+            <p className="mb-1.5 text-xs font-medium text-gray-500">Floor</p>
+            <input
+              type="text"
+              value={floor}
+              onChange={(e) => setFloor(e.target.value)}
+              placeholder="e.g. Ground Floor"
+              className="w-full rounded-lg border border-[#E5E7EB] px-4 py-2.5 text-sm text-[#042B19] focus:outline-none focus:ring-2 focus:ring-[#042B19]"
+            />
+          </div>
           <TagToggle
             label="Occupancy"
             options={["occupied", "unoccupied"] as const}
@@ -201,8 +207,8 @@ export default function ScreensPage() {
   const [creating, setCreating]         = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
   const [viewMode, setViewMode]         = useState<ViewMode>("grid");
-  const [form, setForm] = useState<{ name: string; location: string; occupancy: Occupancy; gender: Gender }>({
-    name: "", location: "", occupancy: null, gender: null,
+  const [form, setForm] = useState<{ name: string; location: string; floor: string; occupancy: Occupancy; gender: Gender }>({
+    name: "", location: "", floor: "", occupancy: null, gender: null,
   });
 
   const loadScreens = useCallback(() => {
@@ -233,10 +239,11 @@ export default function ScreensPage() {
     try {
       await api.createDevice({
         name: form.name.trim(), location: form.location.trim(),
-        ...(form.occupancy ? { occupancy: form.occupancy } : {}),
-        ...(form.gender    ? { gender:    form.gender    } : {}),
+        ...(form.floor.trim()  ? { floor:     form.floor.trim()  } : {}),
+        ...(form.occupancy     ? { occupancy: form.occupancy     } : {}),
+        ...(form.gender        ? { gender:    form.gender        } : {}),
       });
-      setForm({ name: "", location: "", occupancy: null, gender: null });
+      setForm({ name: "", location: "", floor: "", occupancy: null, gender: null });
       setShowForm(false);
       loadScreens();
     } catch (e) { console.error(e); }
@@ -244,14 +251,7 @@ export default function ScreensPage() {
   };
 
   const handleSaved = (updated: Device) => {
-    console.log("[ScreensPage] handleSaved called with:", updated);
-    setScreens((p) => p.map((s) => {
-      if (s.id === updated.id) {
-        console.log("[ScreensPage] Replacing screen:", s.id, "occupancy:", updated.occupancy, "gender:", updated.gender);
-        return updated;
-      }
-      return s;
-    }));
+    setScreens((p) => p.map((s) => s.id === updated.id ? updated : s));
   };
 
   const isOnline    = (s: Device) => s.status === "online";
@@ -300,11 +300,13 @@ export default function ScreensPage() {
               <h3 className="font-semibold text-[#042B19]">New screen</h3>
               <button type="button" onClick={() => setShowForm(false)} className="text-gray-400"><X className="h-5 w-5" /></button>
             </div>
-            <div className="grid gap-3 sm:grid-cols-2">
+            <div className="grid gap-3 sm:grid-cols-3">
               <input type="text" value={form.name} onChange={(e) => setForm({ ...form, name: e.target.value })}
                 placeholder="Screen name" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19]" />
               <input type="text" value={form.location} onChange={(e) => setForm({ ...form, location: e.target.value })}
                 placeholder="Location" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19]" />
+              <input type="text" value={form.floor} onChange={(e) => setForm({ ...form, floor: e.target.value })}
+                placeholder="Floor (e.g. Ground Floor)" className="rounded-lg border border-[#E5E7EB] px-4 py-3 text-sm text-[#042B19]" />
             </div>
             <div className="mt-4 grid gap-4 sm:grid-cols-2">
               <TagToggle label="Occupancy" options={["occupied", "unoccupied"] as const}
@@ -358,7 +360,9 @@ export default function ScreensPage() {
                 </div>
 
                 <h3 className="mb-0.5 text-lg font-bold" style={{ color: "#042B19" }}>{screen.name}</h3>
-                <p className="mb-3 text-sm text-gray-500">{screen.location}</p>
+                <p className="mb-3 text-sm text-gray-500">
+                  {screen.location}{screen.floor ? ` · ${screen.floor}` : ""}
+                </p>
 
                 {/* Occupancy + Gender — always visible */}
                 <div className="mb-3 flex flex-wrap gap-1.5">
@@ -399,6 +403,7 @@ export default function ScreensPage() {
                   <th className="px-4 py-3">Occupancy</th>
                   <th className="px-4 py-3">Gender</th>
                   <th className="px-4 py-3">Location</th>
+                  <th className="px-4 py-3">Floor</th>
                   <th className="px-4 py-3">Last Seen</th>
                   <th className="px-4 py-3 text-right">Actions</th>
                 </tr>
@@ -421,6 +426,7 @@ export default function ScreensPage() {
                     <td className="px-4 py-4"><OccupancyBadge value={screen.occupancy} /></td>
                     <td className="px-4 py-4"><GenderBadge value={screen.gender} /></td>
                     <td className="px-4 py-4 text-gray-600">{screen.location}</td>
+                    <td className="px-4 py-4 text-gray-500">{screen.floor || "—"}</td>
                     <td className="px-4 py-4 text-gray-500">{screen.lastSeen}</td>
                     <td className="px-4 py-4">
                       <div className="flex items-center justify-end gap-2">

@@ -32,7 +32,7 @@ export default function Home() {
             className="rounded-lg border px-8 py-3 font-semibold text-white transition hover:bg-white/10"
             style={{ borderColor: "rgba(255,255,255,0.2)" }}
           >
-            Create account
+            Request access
           </Link>
         </div>
       </div>

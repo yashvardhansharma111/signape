@@ -1,4 +1,4 @@
-import { getAuthHeaders, type AuthResponse, type AuthUser } from "./auth";
+import { getAuthHeaders, type AuthResponse, type AuthUser, type UserRole } from "./auth";
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:5000";
 
@@ -34,6 +34,7 @@ export interface Device {
   name: string;
   status: "online" | "offline";
   location: string;
+  floor: string;
   playlistId: string;
   playlist: string;
   deviceToken: string;
@@ -41,6 +42,52 @@ export interface Device {
   lastSeen: string;
   occupancy: "occupied" | "unoccupied" | null;
   gender: "male" | "female" | null;
+}
+
+export interface LiveOccupancyDevice {
+  id: string;
+  name: string;
+  floor: string;
+  location: string;
+  status: "online" | "offline";
+  occupancy: "occupied" | "unoccupied" | null;
+  gender: "male" | "female" | null;
+}
+
+export interface OccupancyFloorStat {
+  floor: string;
+  total: number;
+  occupied: number;
+  male: number;
+  female: number;
+}
+
+export interface OccupancySummary {
+  total: number;
+  occupied: number;
+  unoccupied: number;
+  male: number;
+  female: number;
+  online: number;
+  untaggedOccupancy: number;
+  untaggedGender: number;
+  floors: OccupancyFloorStat[];
+}
+
+export interface OccupancyHistoryBucket {
+  _id: string;
+  label: string;
+  occupied: number;
+  unoccupied: number;
+  male: number;
+  female: number;
+}
+
+export interface OccupancyHistory {
+  period: string;
+  start: string;
+  end: string;
+  buckets: OccupancyHistoryBucket[];
 }
 
 export interface OverviewStats {
@@ -74,6 +121,26 @@ export interface OverviewResponse {
     selectedDevices: number;
     totalDevices: number;
   };
+}
+
+export interface AdminUser {
+  id: string;
+  email: string;
+  displayName: string;
+  organization: string;
+  phone: string;
+  role: UserRole;
+  status: "pending" | "active" | "inactive";
+  firstTimeLogin: boolean;
+  createdAt: string;
+}
+
+export interface PendingUser {
+  id: string;
+  email: string;
+  displayName: string;
+  phone: string;
+  createdAt: string;
 }
 
 export interface Settings {
@@ -164,24 +231,65 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ email, password }),
     }),
-  signup: (data: {
-    email: string;
-    password: string;
-    displayName?: string;
-    organization?: string;
-  }) =>
-    request<AuthResponse>("/api/auth/signup", {
+  requestAccess: (data: { email: string; displayName?: string; phone?: string }) =>
+    request<{ message: string }>("/api/auth/signup", {
       method: "POST",
       body: JSON.stringify(data),
     }),
   getMe: () => request<{ user: AuthUser }>("/api/auth/me"),
+  changePassword: (data: { currentPassword: string; newPassword: string }) =>
+    request<{ message: string }>("/api/auth/change-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  forgotPassword: (email: string) =>
+    request<{ message: string }>("/api/auth/forgot-password", {
+      method: "POST",
+      body: JSON.stringify({ email }),
+    }),
+  resetPassword: (data: { token: string; newPassword: string }) =>
+    request<{ message: string }>("/api/auth/reset-password", {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  // Admin
+  getAdminUsers: () => request<AdminUser[]>("/api/admin/users"),
+  getPendingUsers: () => request<PendingUser[]>("/api/admin/users/pending"),
+  activateUser: (id: string, data: { role: UserRole; password: string }) =>
+    request<AdminUser>(`/api/admin/users/${id}/activate`, {
+      method: "POST",
+      body: JSON.stringify(data),
+    }),
+  setUserRole: (id: string, role: UserRole) =>
+    request<AdminUser>(`/api/admin/users/${id}/role`, {
+      method: "PATCH",
+      body: JSON.stringify({ role }),
+    }),
+  toggleUserStatus: (id: string, status: "active" | "inactive") =>
+    request<AdminUser>(`/api/admin/users/${id}/status`, {
+      method: "PATCH",
+      body: JSON.stringify({ status }),
+    }),
   getLiveDevices: () => request<LiveDeviceStats>("/api/devices/live"),
   getDevices: (search?: string) =>
     request<Device[]>(`/api/devices${search ? `?search=${encodeURIComponent(search)}` : ""}`),
-  createDevice: (data: { name: string; location: string; playlistId?: string; occupancy?: "occupied" | "unoccupied"; gender?: "male" | "female" }) =>
+  createDevice: (data: { name: string; location: string; floor?: string; playlistId?: string; occupancy?: "occupied" | "unoccupied"; gender?: "male" | "female" }) =>
     request<Device>("/api/devices", { method: "POST", body: JSON.stringify(data) }),
-  updateDevice: (id: string, data: { name?: string; location?: string; occupancy?: "occupied" | "unoccupied" | null; gender?: "male" | "female" | null }) =>
+  updateDevice: (id: string, data: { name?: string; location?: string; floor?: string; occupancy?: "occupied" | "unoccupied" | null; gender?: "male" | "female" | null }) =>
     request<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  getOccupancyLive: (params?: { floor?: string; gender?: string; status?: string }) => {
+    const q = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    return request<LiveOccupancyDevice[]>(`/api/occupancy/live${q ? `?${q}` : ""}`);
+  },
+  getOccupancyFloors: () => request<string[]>("/api/occupancy/floors"),
+  getOccupancySummary: (params?: { floor?: string; gender?: string }) => {
+    const q = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    return request<OccupancySummary>(`/api/occupancy/summary${q ? `?${q}` : ""}`);
+  },
+  getOccupancyHistory: (params: { period: string; date?: string; floor?: string; gender?: string; status?: string }) => {
+    const q = new URLSearchParams(params as Record<string, string>).toString();
+    return request<OccupancyHistory>(`/api/occupancy/history?${q}`);
+  },
   getPlaylists: () => request<Playlist[]>("/api/playlists"),
   createPlaylist: (data: { name: string; status?: "published" | "draft"; mediaIds?: string[]; contentIds?: string[] }) =>
     request<Playlist>("/api/playlists", { method: "POST", body: JSON.stringify(data) }),

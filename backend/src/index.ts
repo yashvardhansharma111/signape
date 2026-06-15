@@ -4,6 +4,7 @@ import { connectDb, disconnectDb } from "./db/connection.js";
 import { env } from "./config/env.js";
 import { attachSocketServer } from "./socket/index.js";
 import { ensureDeviceTokens } from "./services/index.js";
+import { seedSuperAdmin, migrateExistingUsers } from "./services/auth.js";
 import { startScheduler } from "./services/scheduler.js";
 
 let server: Server | undefined;
@@ -11,6 +12,8 @@ let server: Server | undefined;
 async function main() {
   await connectDb();
   await ensureDeviceTokens();
+  await migrateExistingUsers();
+  await seedSuperAdmin();
 
   server = app.listen(env.port, () => {
     console.log(`Signape backend running on http://localhost:${env.port}`);

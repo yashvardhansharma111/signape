@@ -25,6 +25,7 @@ export async function enrichDevice(device: IDevice) {
     name: device.name,
     status: device.status,
     location: device.location,
+    floor: device.floor ?? "",
     playlistId: device.playlistId?.toString() ?? "",
     deviceToken: device.deviceToken,
     lastSeenAt: device.lastSeenAt.toISOString(),

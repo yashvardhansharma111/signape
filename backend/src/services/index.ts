@@ -1,5 +1,6 @@
 import mongoose from "mongoose";
 import { Device } from "../models/Device.js";
+import { OccupancyLog } from "../models/OccupancyLog.js";
 import { Media } from "../models/Media.js";
 import { Playlist } from "../models/Playlist.js";
 import { Schedule } from "../models/Schedule.js";
@@ -77,6 +78,7 @@ export async function createDevice(input: CreateDeviceInput) {
   const device = await Device.create({
     name: input.name,
     location: input.location,
+    floor: input.floor ?? "",
     ...(playlistId ? { playlistId } : {}),
     deviceToken: generateDeviceToken(),
     status: "offline",
@@ -96,13 +98,24 @@ export async function updateDevice(id: string, input: UpdateDeviceInput) {
     update.lastSeenAt = new Date();
   }
 
-  console.log("[updateDevice] id:", id, "update payload:", JSON.stringify(update));
+  const prevDevice = await Device.findById(id).lean();
   const device = await Device.findByIdAndUpdate(id, update, { new: true });
-  console.log("[updateDevice] saved doc occupancy:", device?.occupancy, "gender:", device?.gender);
   if (!device) return null;
-  const enriched = await enrichDevice(device);
-  console.log("[updateDevice] enriched result occupancy:", enriched.occupancy, "gender:", enriched.gender);
-  return enriched;
+
+  // Log occupancy change if status changed or was newly set
+  if (input.occupancy && input.occupancy !== prevDevice?.occupancy) {
+    await OccupancyLog.create({
+      deviceId: device._id,
+      deviceName: device.name,
+      floor: device.floor ?? "",
+      location: device.location,
+      gender: device.gender ?? null,
+      status: input.occupancy,
+      timestamp: new Date(),
+    });
+  }
+
+  return enrichDevice(device);
 }
 
 export async function deleteDevice(id: string) {
