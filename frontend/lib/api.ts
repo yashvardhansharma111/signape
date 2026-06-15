@@ -39,6 +39,8 @@ export interface Device {
   deviceToken: string;
   lastSeenAt: string;
   lastSeen: string;
+  occupancy: "occupied" | "unoccupied" | null;
+  gender: "male" | "female" | null;
 }
 
 export interface OverviewStats {
@@ -165,8 +167,10 @@ export const api = {
   getLiveDevices: () => request<LiveDeviceStats>("/api/devices/live"),
   getDevices: (search?: string) =>
     request<Device[]>(`/api/devices${search ? `?search=${encodeURIComponent(search)}` : ""}`),
-  createDevice: (data: { name: string; location: string; playlistId?: string }) =>
+  createDevice: (data: { name: string; location: string; playlistId?: string; occupancy?: "occupied" | "unoccupied"; gender?: "male" | "female" }) =>
     request<Device>("/api/devices", { method: "POST", body: JSON.stringify(data) }),
+  updateDevice: (id: string, data: { name?: string; location?: string; occupancy?: "occupied" | "unoccupied" | null; gender?: "male" | "female" | null }) =>
+    request<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   getPlaylists: () => request<Playlist[]>("/api/playlists"),
   createPlaylist: (data: { name: string; status?: "published" | "draft"; mediaIds?: string[]; contentIds?: string[] }) =>
     request<Playlist>("/api/playlists", { method: "POST", body: JSON.stringify(data) }),
