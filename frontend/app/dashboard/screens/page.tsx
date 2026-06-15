@@ -3,13 +3,64 @@
 import { useCallback, useEffect, useState } from "react";
 import {
   Monitor, Wifi, WifiOff, Plus, Search,
-  Copy, ExternalLink, X, LayoutGrid, List, Pencil,
+  Copy, ExternalLink, X, LayoutGrid, List, Pencil, Trash2,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
-import { api, type Device } from "@/lib/api";
+import { api, type Device, type DevicePreviewItem } from "@/lib/api";
 import { patchDeviceStatus, useDashboardSocket } from "@/lib/useDashboardSocket";
 
 type ViewMode = "grid" | "list";
+
+// ── Live preview thumbnail ────────────────────────────────────────────────────
+function LivePreview({ items }: { items: DevicePreviewItem[] }) {
+  const [idx, setIdx] = useState(0);
+
+  useEffect(() => {
+    if (items.length <= 1) return;
+    const id = setInterval(() => setIdx((i) => (i + 1) % items.length), 5000);
+    return () => clearInterval(id);
+  }, [items.length]);
+
+  const base = "h-14 w-24 rounded-lg overflow-hidden flex-shrink-0 bg-gray-100 flex items-center justify-center";
+
+  if (items.length === 0) {
+    return (
+      <div className={base}>
+        <Monitor className="h-5 w-5 text-gray-300" />
+      </div>
+    );
+  }
+
+  const item = items[idx % items.length];
+
+  if (item.type === "image" && item.url) {
+    return (
+      <div className={base}>
+        {/* eslint-disable-next-line @next/next/no-img-element */}
+        <img src={item.url} alt={item.name} className="h-full w-full object-cover" />
+      </div>
+    );
+  }
+
+  if (item.type === "video" && item.url) {
+    return (
+      <div className={base}>
+        <video
+          src={item.url}
+          className="h-full w-full object-cover"
+          autoPlay muted loop playsInline
+        />
+      </div>
+    );
+  }
+
+  // content / canvas item — show background colour with a small icon
+  return (
+    <div className={base} style={{ backgroundColor: item.background || "#e5e7eb" }}>
+      <Monitor className="h-5 w-5 text-white/60" />
+    </div>
+  );
+}
 
 // ── Edit modal ────────────────────────────────────────────────────────────────
 function EditModal({ device, onClose, onSaved }: {
@@ -77,22 +128,39 @@ function EditModal({ device, onClose, onSaved }: {
 // ── Main page ─────────────────────────────────────────────────────────────────
 export default function ScreensPage() {
   const [screens,       setScreens]       = useState<Device[]>([]);
+  const [previews,      setPreviews]      = useState<Map<string, DevicePreviewItem[]>>(new Map());
   const [search,        setSearch]        = useState("");
   const [loading,       setLoading]       = useState(true);
   const [copiedId,      setCopiedId]      = useState<string | null>(null);
   const [showForm,      setShowForm]      = useState(false);
   const [creating,      setCreating]      = useState(false);
   const [editingDevice, setEditingDevice] = useState<Device | null>(null);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
   const [viewMode,      setViewMode]      = useState<ViewMode>("grid");
   const [form, setForm] = useState({ name: "", location: "", floor: "" });
+
+  const loadPreviews = useCallback(async () => {
+    try {
+      const data = await api.getDevicePreviews();
+      setPreviews(new Map(data.map((d) => [d.deviceId, d.items])));
+    } catch { /* silent */ }
+  }, []);
 
   const loadScreens = useCallback(() => {
     setLoading(true);
     api.getDevices(search || undefined)
-      .then(setScreens).catch(console.error).finally(() => setLoading(false));
-  }, [search]);
+      .then((devs) => { setScreens(devs); loadPreviews(); })
+      .catch(console.error)
+      .finally(() => setLoading(false));
+  }, [search, loadPreviews]);
 
   useEffect(() => { loadScreens(); }, [loadScreens]);
+
+  // Refresh previews every 30 s independently of full reload
+  useEffect(() => {
+    const id = setInterval(loadPreviews, 30_000);
+    return () => clearInterval(id);
+  }, [loadPreviews]);
 
   useDashboardSocket({
     onDeviceConnected:    ({ deviceId }) => setScreens((p) => patchDeviceStatus(p, deviceId, "online")),
@@ -126,6 +194,16 @@ export default function ScreensPage() {
 
   const handleSaved = (updated: Device) =>
     setScreens((p) => p.map((s) => s.id === updated.id ? updated : s));
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this screen? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await api.deleteDevice(id);
+      setScreens((p) => p.filter((s) => s.id !== id));
+    } catch (e) { console.error(e); }
+    finally { setDeletingId(null); }
+  };
 
   const isOnline    = (s: Device) => s.status === "online";
   const borderColor = (s: Device) => isOnline(s) ? "#16a34a" : "#dc2626";
@@ -205,11 +283,10 @@ export default function ScreensPage() {
                 style={{ border: `2px solid ${borderColor(screen)}` }}>
 
                 <div className="mb-3 flex items-start justify-between">
-                  <div className="flex h-11 w-11 items-center justify-center rounded-lg"
-                    style={{ backgroundColor: isOnline(screen) ? "#DCFCE7" : "#FEE2E2" }}>
-                    <Monitor className="h-5 w-5" style={{ color: borderColor(screen) }} />
-                  </div>
-                  <div className="flex items-center gap-1.5">
+                  {/* Live preview thumbnail */}
+                  <LivePreview items={previews.get(screen.id) ?? []} />
+
+                  <div className="flex items-center gap-1.5 ml-3">
                     <span className="inline-flex items-center gap-1 rounded-full px-2.5 py-1 text-xs font-semibold capitalize"
                       style={{ backgroundColor: badgeBg(screen), color: badgeText(screen) }}>
                       {isOnline(screen) ? <Wifi className="h-3 w-3" /> : <WifiOff className="h-3 w-3" />}
@@ -218,6 +295,10 @@ export default function ScreensPage() {
                     <button type="button" onClick={() => setEditingDevice(screen)} title="Edit screen"
                       className="rounded-lg p-1.5 text-gray-400 hover:bg-gray-100 hover:text-[#042B19] transition">
                       <Pencil className="h-3.5 w-3.5" />
+                    </button>
+                    <button type="button" onClick={() => handleDelete(screen.id)} disabled={deletingId === screen.id} title="Delete screen"
+                      className="rounded-lg p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-40">
+                      <Trash2 className="h-3.5 w-3.5" />
                     </button>
                   </div>
                 </div>
@@ -256,6 +337,7 @@ export default function ScreensPage() {
                 <tr className="border-b text-left text-xs font-semibold uppercase tracking-wide text-gray-500"
                   style={{ borderColor: "#E5E7EB", backgroundColor: "#F9FAFB" }}>
                   <th className="px-4 py-3">Status</th>
+                  <th className="px-4 py-3">Live</th>
                   <th className="px-4 py-3">Name</th>
                   <th className="px-4 py-3">Location</th>
                   <th className="px-4 py-3">Floor</th>
@@ -275,6 +357,9 @@ export default function ScreensPage() {
                       </span>
                     </td>
                     <td className="px-4 py-4">
+                      <LivePreview items={previews.get(screen.id) ?? []} />
+                    </td>
+                    <td className="px-4 py-4">
                       <p className="text-base font-bold" style={{ color: "#042B19" }}>{screen.name}</p>
                       <p className="text-xs text-gray-400">{screen.playlist || "No playlist"}</p>
                     </td>
@@ -286,6 +371,10 @@ export default function ScreensPage() {
                         <button type="button" onClick={() => setEditingDevice(screen)} title="Edit screen"
                           className="rounded-lg border border-[#E5E7EB] p-1.5 text-gray-400 hover:bg-gray-50 hover:text-[#042B19] transition">
                           <Pencil className="h-3.5 w-3.5" />
+                        </button>
+                        <button type="button" onClick={() => handleDelete(screen.id)} disabled={deletingId === screen.id} title="Delete screen"
+                          className="rounded-lg border border-[#E5E7EB] p-1.5 text-gray-400 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-40">
+                          <Trash2 className="h-3.5 w-3.5" />
                         </button>
                         <button type="button" onClick={() => copyDisplayUrl(screen)}
                           className="inline-flex items-center gap-1 rounded-lg border border-[#E5E7EB] px-3 py-1.5 text-xs font-medium text-[#042B19] hover:bg-gray-50">

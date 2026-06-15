@@ -29,6 +29,18 @@ export interface LiveDeviceStats {
   total: number;
 }
 
+export interface DevicePreviewItem {
+  type: "image" | "video" | "content";
+  url?: string;
+  background?: string;
+  name: string;
+}
+
+export interface DevicePreview {
+  deviceId: string;
+  items: DevicePreviewItem[];
+}
+
 export interface Device {
   id: string;
   name: string;
@@ -282,10 +294,12 @@ export const api = {
   getLiveDevices: () => request<LiveDeviceStats>("/api/devices/live"),
   getDevices: (search?: string) =>
     request<Device[]>(`/api/devices${search ? `?search=${encodeURIComponent(search)}` : ""}`),
+  getDevicePreviews: () => request<DevicePreview[]>("/api/devices/previews"),
   createDevice: (data: { name: string; location: string; floor?: string; playlistId?: string; occupancy?: "occupied" | "unoccupied"; gender?: "male" | "female" }) =>
     request<Device>("/api/devices", { method: "POST", body: JSON.stringify(data) }),
   updateDevice: (id: string, data: { name?: string; location?: string; floor?: string; occupancy?: "occupied" | "unoccupied" | null; gender?: "male" | "female" | null }) =>
     request<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
+  deleteDevice: (id: string) => request<void>(`/api/devices/${id}`, { method: "DELETE" }),
   getOccupancyLive: (params?: { floor?: string; gender?: string; status?: string }) => {
     const q = cleanParams(params ?? {});
     return request<LiveOccupancyDevice[]>(`/api/occupancy/live${q ? `?${q}` : ""}`);

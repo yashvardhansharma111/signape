@@ -3,7 +3,7 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import {
   Users, Filter, RefreshCw, Building2, UserCheck, UserX,
-  ChevronDown, Pencil, X, Copy, ExternalLink, Plus,
+  ChevronDown, Pencil, X, Copy, ExternalLink, Plus, Trash2,
 } from "lucide-react";
 import DashboardHeader from "@/components/dashboard/DashboardHeader";
 import {
@@ -93,12 +93,14 @@ function StatCard({ label, value, sub, bg, color, icon }: {
   );
 }
 
-function DeviceCard({ device, onEdit, onCopy, displayUrl, copied }: {
+function DeviceCard({ device, onEdit, onDelete, onCopy, displayUrl, copied, deleting }: {
   device: LiveOccupancyDevice;
   onEdit: () => void;
+  onDelete: () => void;
   onCopy: () => void;
   displayUrl: string;
   copied: boolean;
+  deleting: boolean;
 }) {
   const accent = device.occupancy === "occupied" ? OCC_RED
     : device.occupancy === "unoccupied" ? OCC_GREEN
@@ -116,6 +118,10 @@ function DeviceCard({ device, onEdit, onCopy, displayUrl, copied }: {
           <button type="button" onClick={onEdit} title="Edit tags"
             className="rounded-lg p-1 text-gray-400 hover:bg-gray-100 hover:text-[#042B19] transition">
             <Pencil className="h-3.5 w-3.5" />
+          </button>
+          <button type="button" onClick={onDelete} disabled={deleting} title="Delete screen"
+            className="rounded-lg p-1 text-gray-400 hover:bg-red-50 hover:text-red-600 transition disabled:opacity-40">
+            <Trash2 className="h-3.5 w-3.5" />
           </button>
         </div>
       </div>
@@ -283,6 +289,7 @@ export default function OccupancyPage() {
   const [loading,       setLoading]       = useState(true);
   const [refreshing,    setRefreshing]    = useState(false);
   const [editingDevice, setEditingDevice] = useState<LiveOccupancyDevice | null>(null);
+  const [deletingId,    setDeletingId]    = useState<string | null>(null);
   const [copiedId,      setCopiedId]      = useState<string | null>(null);
   const [showForm,      setShowForm]      = useState(false);
   const [creating,      setCreating]      = useState(false);
@@ -368,6 +375,16 @@ export default function OccupancyPage() {
       await load();
     } catch (e) { console.error(e); }
     finally { setCreating(false); }
+  };
+
+  const handleDelete = async (id: string) => {
+    if (!confirm("Delete this screen? This cannot be undone.")) return;
+    setDeletingId(id);
+    try {
+      await api.deleteDevice(id);
+      setDevices((prev) => prev.filter((d) => d.id !== id));
+    } catch (e) { console.error(e); }
+    finally { setDeletingId(null); }
   };
 
   const handleTagSaved = (
@@ -515,9 +532,11 @@ export default function OccupancyPage() {
                     key={d.id}
                     device={d}
                     onEdit={() => setEditingDevice(d)}
+                    onDelete={() => handleDelete(d.id)}
                     onCopy={() => copyDisplayUrl(d)}
                     displayUrl={getDisplayUrl(d)}
                     copied={copiedId === d.id}
+                    deleting={deletingId === d.id}
                   />
                 ))}
               </div>

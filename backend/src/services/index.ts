@@ -8,7 +8,8 @@ import { Settings } from "../models/Settings.js";
 import { PresentSession } from "../models/PresentSession.js";
 import { enrichDevice, formatMedia } from "../utils/format.js";
 import { generateDeviceToken } from "../utils/deviceToken.js";
-import { buildPlaybackPayload } from "./streaming.js";
+import { buildPlaybackPayload, resolvePlaylistItems } from "./streaming.js";
+import type { StreamMediaItem, StreamContentItem } from "../socket/types.js";
 import { getConnectedDeviceIds } from "../socket/registry.js";
 import type {
   CreateDeviceInput,
@@ -481,4 +482,44 @@ export async function getOverview() {
       totalDevices: liveDevices.total,
     },
   };
+}
+
+export async function getDevicePreviews() {
+  const devices = await Device.find({}).lean();
+  const activeSession = await PresentSession.findOne({ startedAt: { $ne: null } })
+    .sort({ startedAt: -1 })
+    .lean();
+
+  // Build deviceId → playlistId map, preferring the active session playlist
+  const playlistByDevice = new Map<string, string>();
+  for (const d of devices) {
+    const deviceId = d._id.toString();
+    const inSession = activeSession?.deviceIds.some((id) => id.toString() === deviceId);
+    const pid = (inSession ? activeSession?.playlistId : d.playlistId)?.toString();
+    if (pid) playlistByDevice.set(deviceId, pid);
+  }
+
+  // Resolve each unique playlist once
+  const uniquePlaylistIds = [...new Set(playlistByDevice.values())];
+  const resolvedMap = new Map<string, { type: string; url?: string; background?: string; name: string }[]>();
+  await Promise.all(
+    uniquePlaylistIds.map(async (pid) => {
+      const items = await resolvePlaylistItems(pid);
+      resolvedMap.set(
+        pid,
+        items.slice(0, 6).map((i) => ({
+          type: i.type,
+          url: i.type !== "content" ? (i as StreamMediaItem).url : undefined,
+          background: i.type === "content" ? (i as StreamContentItem).background : undefined,
+          name: i.name,
+        }))
+      );
+    })
+  );
+
+  return devices.map((d) => {
+    const deviceId = d._id.toString();
+    const pid = playlistByDevice.get(deviceId);
+    return { deviceId, items: pid ? (resolvedMap.get(pid) ?? []) : [] };
+  });
 }

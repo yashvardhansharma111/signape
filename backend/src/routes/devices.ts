@@ -4,6 +4,7 @@ import {
   createDevice,
   deleteDevice,
   getDevice,
+  getDevicePreviews,
   getLiveDeviceStats,
   listDevices,
   updateDevice,
@@ -16,6 +17,13 @@ router.get(
   "/live",
   asyncHandler(async (_req, res) => {
     res.json(await getLiveDeviceStats());
+  })
+);
+
+router.get(
+  "/previews",
+  asyncHandler(async (_req, res) => {
+    res.json(await getDevicePreviews());
   })
 );
 
