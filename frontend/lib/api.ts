@@ -225,6 +225,14 @@ export interface ContentItem {
   updatedAt: string;
 }
 
+// Strip undefined / null / empty values so they don't appear as "undefined" in URLs
+function cleanParams(obj: Record<string, string | undefined | null>): string {
+  const filtered = Object.fromEntries(
+    Object.entries(obj).filter(([, v]) => v !== undefined && v !== null && v !== "" && v !== "undefined")
+  ) as Record<string, string>;
+  return new URLSearchParams(filtered).toString();
+}
+
 export const api = {
   login: (email: string, password: string) =>
     request<AuthResponse>("/api/auth/login", {
@@ -278,16 +286,16 @@ export const api = {
   updateDevice: (id: string, data: { name?: string; location?: string; floor?: string; occupancy?: "occupied" | "unoccupied" | null; gender?: "male" | "female" | null }) =>
     request<Device>(`/api/devices/${id}`, { method: "PATCH", body: JSON.stringify(data) }),
   getOccupancyLive: (params?: { floor?: string; gender?: string; status?: string }) => {
-    const q = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    const q = cleanParams(params ?? {});
     return request<LiveOccupancyDevice[]>(`/api/occupancy/live${q ? `?${q}` : ""}`);
   },
   getOccupancyFloors: () => request<string[]>("/api/occupancy/floors"),
   getOccupancySummary: (params?: { floor?: string; gender?: string }) => {
-    const q = new URLSearchParams(params as Record<string, string> ?? {}).toString();
+    const q = cleanParams(params ?? {});
     return request<OccupancySummary>(`/api/occupancy/summary${q ? `?${q}` : ""}`);
   },
   getOccupancyHistory: (params: { period: string; date?: string; floor?: string; gender?: string; status?: string }) => {
-    const q = new URLSearchParams(params as Record<string, string>).toString();
+    const q = cleanParams(params);
     return request<OccupancyHistory>(`/api/occupancy/history?${q}`);
   },
   getPlaylists: () => request<Playlist[]>("/api/playlists"),

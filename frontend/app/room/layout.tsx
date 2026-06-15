@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { usePathname, useRouter } from "next/navigation";
 import { clearAccessToken } from "@/lib/auth";
-import { BarChart3, Settings, LogOut, LayoutDashboard } from "lucide-react";
+import { BarChart3, LogOut } from "lucide-react";
 
 const SIDEBAR_BG = "#1e0a3c";
 
@@ -18,8 +18,7 @@ export default function RoomLayout({ children }: { children: React.ReactNode }) 
   };
 
   const navItems = [
-    { label: "Occupancy",  href: "/room",          icon: BarChart3     },
-    { label: "Settings",   href: "/room/settings",  icon: Settings      },
+    { label: "Occupancy", href: "/room", icon: BarChart3 },
   ];
 
   return (

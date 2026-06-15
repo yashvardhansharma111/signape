@@ -18,6 +18,7 @@ import {
   Users,
   BarChart3,
 } from "lucide-react";
+// Users and BarChart3 are used in navItems
 import { api, type LiveDeviceStats } from "@/lib/api";
 import { clearAccessToken } from "@/lib/auth";
 import { useDashboardSocket } from "@/lib/useDashboardSocket";
@@ -60,11 +61,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
     router.push("/login");
     router.refresh();
   };
-
-  // Read role from cookie for conditional nav items
-  const role = typeof document !== "undefined"
-    ? document.cookie.split(";").find((c) => c.trim().startsWith("signape_role="))?.split("=")[1]?.trim()
-    : undefined;
 
   const isActive = (href: string) => {
     if (href === "/dashboard") return pathname === "/dashboard";
@@ -114,20 +110,6 @@ export default function Sidebar({ isOpen, setIsOpen }: SidebarProps) {
       </div>
 
       <nav className="flex-1 overflow-y-auto px-3 py-4">
-        {(role === "superadmin" || role === "both") && isOpen && (
-          <div className="mb-3">
-            <a href="/room" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white/50 hover:bg-white/10 hover:text-white/80 transition">
-              <BarChart3 className="h-4 w-4 shrink-0" />
-              Room Occupancy ↗
-            </a>
-            {role === "superadmin" && (
-              <a href="/admin" className="flex items-center gap-2 rounded-lg px-3 py-2 text-xs font-semibold text-white/50 hover:bg-white/10 hover:text-white/80 transition">
-                <Users className="h-4 w-4 shrink-0" />
-                Admin Panel ↗
-              </a>
-            )}
-          </div>
-        )}
         <ul className="space-y-1">
           {navItems.map((item) => {
             const Icon = item.icon;

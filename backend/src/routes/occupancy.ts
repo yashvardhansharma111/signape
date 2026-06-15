@@ -10,9 +10,9 @@ router.get("/live", asyncHandler(async (req, res) => {
   const { floor, gender, status } = req.query as Record<string, string>;
 
   const filter: Record<string, unknown> = {};
-  if (floor  && floor  !== "all") filter.floor    = floor;
-  if (gender && gender !== "all") filter.gender   = gender;
-  if (status && status !== "all") filter.occupancy = status;
+  if (floor  && floor  !== "all" && floor  !== "undefined") filter.floor    = floor;
+  if (gender && gender !== "all" && gender !== "undefined") filter.gender   = gender;
+  if (status && status !== "all" && status !== "undefined") filter.occupancy = status;
 
   const devices = await Device.find(filter).sort({ name: 1 }).lean();
 
@@ -41,8 +41,8 @@ router.get("/summary", asyncHandler(async (req, res) => {
   const { floor, gender } = req.query as Record<string, string>;
 
   const filter: Record<string, unknown> = {};
-  if (floor  && floor  !== "all") filter.floor  = floor;
-  if (gender && gender !== "all") filter.gender = gender;
+  if (floor  && floor  !== "all" && floor  !== "undefined") filter.floor  = floor;
+  if (gender && gender !== "all" && gender !== "undefined") filter.gender = gender;
 
   const devices = await Device.find(filter).lean();
 
@@ -76,7 +76,12 @@ router.get("/summary", asyncHandler(async (req, res) => {
 router.get("/history", asyncHandler(async (req, res) => {
   const { floor, gender, status, period = "day", date } = req.query as Record<string, string>;
 
-  const baseDate = date ? new Date(date) : new Date();
+  const safeDate = date && date !== "undefined" && date !== "null" ? date : null;
+  const baseDate = safeDate ? new Date(safeDate) : new Date();
+  if (safeDate && isNaN(baseDate.getTime())) {
+    res.status(400).json({ error: "Invalid date format" });
+    return;
+  }
   let start: Date;
   let end: Date;
   let groupFormat: string;
@@ -97,9 +102,9 @@ router.get("/history", asyncHandler(async (req, res) => {
   }
 
   const match: Record<string, unknown> = { timestamp: { $gte: start, $lte: end } };
-  if (floor  && floor  !== "all") match.floor  = floor;
-  if (gender && gender !== "all") match.gender = gender;
-  if (status && status !== "all") match.status = status;
+  if (floor  && floor  !== "all" && floor  !== "undefined") match.floor  = floor;
+  if (gender && gender !== "all" && gender !== "undefined") match.gender = gender;
+  if (status && status !== "all" && status !== "undefined") match.status = status;
 
   const agg = await OccupancyLog.aggregate([
     { $match: match },
